@@ -1,7 +1,7 @@
 set(APP_NAME pac)
 add_executable(${APP_NAME} main.cpp)
 # add_executable(${APP_NAME} WIN32 main.cpp)
-# target_compile_features(${APP_NAME} PRIVATE cxx_std_17)
+target_compile_features(${APP_NAME} PRIVATE cxx_std_17)
 
 # target_include_directories(${APP_NAME} PUBLIC ${WinSDK})
 
