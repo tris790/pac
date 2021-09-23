@@ -9,4 +9,4 @@ Run once:
 
 Run to build: 
 - Debug: `cmake --build build64 --config Debug`
-- Release: `cmake --build build64 --config Release -DCMAKE_CXX_COMPILER=` ` ``which g++`
+- Release: `cmake --build build64 --config Release` add: -DCMAKE_CXX_COMPILER=PATH_TO_YOUR_COMPILER (run: which g++)
