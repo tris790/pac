@@ -1,6 +1,9 @@
 # PAC - Portals Across Computers
 <p align="center"><a href="https://vuejs.org" target="_blank" rel="noopener noreferrer"><img width="100" src="assets/tupac3.png" alt="Pac logo"></a></p>
 
+## Prerequisite
+- [SDL2](https://www.libsdl.org/download-2.0.php)
+
 ## Building
 ### Server
 cd build
