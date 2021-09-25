@@ -1,0 +1,2 @@
+# Texte promotionnel du projet
+Un peu comme ces compères TeamViewer, Parsec et plusieurs autres, `Nom de projet` offre des fonctionnalités de visualisation et de contrôle d’un ordinateur à distance. Nos particularités, une plateforme open source entièrement gratuite, une fluidité qui vous donne l’impression d’être directement sur la machine avec un temps de réponse visée sous la barre des 50 ms et la possibilité de pouvoir jouer à vos jeux préférer à distance. 
