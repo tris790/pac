@@ -4,6 +4,16 @@
 ## Prerequisite
 - [SDL2](https://www.libsdl.org/download-2.0.php)
 
+## Install SDL2
+### Windows
+1. Download [SDL2](https://www.libsdl.org/download-2.0.php) development libraries
+2. Extract the .zip file in the `src\lib` folder
+3. Rename the extracted folder to `SDL2`
+4. You should now have that hierarchy
+   
+   ![SDL2 hierarchy after unzip](assets/SDL2Hierarchy.png?raw=true "Title")
+
+
 ## Building
 ### Server
 cd build
