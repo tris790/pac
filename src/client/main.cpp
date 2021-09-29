@@ -44,12 +44,14 @@ int network_thread_fn(void *opaque)
     thread_exit = 0;
     uvgrtp::context ctx;
     std::string server_hostname("127.0.0.1");
-    uvgrtp::session *sess = ctx.create_session(server_hostname);
-    printf("Connecting to %s\n", server_hostname.c_str());
+    auto receive_port = 8889;
+    auto send_port = 8888;
+    uvgrtp::session *session = ctx.create_session(server_hostname);
+    printf("Connecting to %s:%d\n", server_hostname.c_str(), receive_port);
     uvgrtp::media_stream *rtp_stream = nullptr;
 
     // Retry to connect every second if connection failed
-    while ((rtp_stream = sess->create_stream(8889, 8888, RTP_FORMAT_GENERIC, RTP_NO_FLAGS)) == nullptr && !thread_exit)
+    while ((rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RTP_NO_FLAGS)) == nullptr && !thread_exit)
     {
         printf("Failed to connect to %s\n", server_hostname.c_str());
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -69,7 +71,7 @@ int network_thread_fn(void *opaque)
         }
     }
 
-    ctx.destroy_session(sess);
+    ctx.destroy_session(session);
     return 0;
 }
 

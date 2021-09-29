@@ -3,28 +3,23 @@
 
 int main()
 {
-    std::cout << "I'm the server" << std::endl;
+    std::string hostname("127.0.0.1");
+    auto receive_port = 8888;
+    auto send_port = 8889;
 
     uvgrtp::context ctx;
-    printf("Server1\n");
-    uvgrtp::session *sess = ctx.create_session("127.0.0.1");
-    printf("Server2\n");
+    printf("Initializing the server\n");
+    uvgrtp::session *session = ctx.create_session(hostname.c_str());
+    printf("Initializing the server\n");
+    uvgrtp::media_stream *rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RTP_NO_FLAGS);
 
-    uvgrtp::media_stream *strm = sess->create_stream(8888, 8889, RTP_FORMAT_GENERIC, RTP_NO_FLAGS);
-    printf("Server3\n");
-
-    char *message = (char *)"Hello, world!";
-    size_t msg_len = strlen(message) + 1;
-    printf("Server4\n");
-
+    std::string message("Hello, world!");
     for (;;)
     {
-        printf("Server5\n");
-        strm->push_frame((uint8_t *)message, msg_len, RTP_NO_FLAGS);
-        printf("Server6\n");
-        // auto frame = strm->pull_frame();
-        // fprintf(stderr, "Message: '%s'\n", frame->payload);
-        // uvgrtp::frame::dealloc_frame(frame);
+        printf("Sending '%s' to the client\n", message.c_str());
+        rtp_stream->push_frame((uint8_t *)(message.c_str()), message.length() + 1, RTP_NO_FLAGS);
     }
+
+    ctx.destroy_session(session);
     return 0;
 }
