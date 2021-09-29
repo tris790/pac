@@ -18,3 +18,16 @@ add_custom_command(TARGET ${APP_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${SDL2_PATH}/lib/x64/SDL2.dll"
         $<TARGET_FILE_DIR:${APP_NAME}>)
+
+# WINSOCK2
+target_link_libraries(${APP_NAME} PUBLIC Ws2_32)
+
+# CRYPTO++
+SET(CRYPTOPP_PATH ${CMAKE_SOURCE_DIR}/libs/CRYPTOPP)
+target_include_directories(${APP_NAME} PUBLIC ${CRYPTOPP_PATH})
+
+# UVG
+SET(UVGRTP_PATH ${CMAKE_SOURCE_DIR}/libs/uvgRTP)
+target_include_directories(${APP_NAME} PUBLIC ${UVGRTP_PATH}/include)
+target_link_directories(${APP_NAME} PUBLIC ${UVGRTP_PATH}/build/Release)
+target_link_libraries(${APP_NAME} PUBLIC uvgrtp)
