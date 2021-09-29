@@ -3,6 +3,8 @@
 #pragma warning(disable : 4996)
 #include "SDL.h"
 #include <lib.hh>
+#include <thread>
+#include <chrono>
 
 #undef main
 const int bpp = 12;
@@ -16,9 +18,10 @@ unsigned char buffer[pixel_w * pixel_h * bpp / 8];
 //Break
 #define BREAK_EVENT (SDL_USEREVENT + 2)
 
+// Multithread problem ?
 int thread_exit = 0;
 
-int refresh_video(void *opaque)
+int refresh_video_thread_fn(void *opaque)
 {
     thread_exit = 0;
     while (thread_exit == 0)
@@ -28,7 +31,7 @@ int refresh_video(void *opaque)
         SDL_PushEvent(&event);
         SDL_Delay(40);
     }
-    thread_exit = 0;
+
     //Break
     SDL_Event event;
     event.type = BREAK_EVENT;
@@ -36,45 +39,35 @@ int refresh_video(void *opaque)
     return 0;
 }
 
-int network(void *opaque)
+int network_thread_fn(void *opaque)
 {
+    thread_exit = 0;
     uvgrtp::context ctx;
-    printf("Client1\n");
-    /* See sending.cc for more details */
-    uvgrtp::session *sess = ctx.create_session("127.0.0.1");
-    printf("Client2\n");
+    std::string server_hostname("127.0.0.1");
+    uvgrtp::session *sess = ctx.create_session(server_hostname);
+    printf("Connecting to %s\n", server_hostname.c_str());
+    uvgrtp::media_stream *rtp_stream = nullptr;
 
-    /* See sending.cc for more details */
-    uvgrtp::media_stream *hevc = sess->create_stream(8889, 8888, RTP_FORMAT_GENERIC, RTP_NO_FLAGS);
-    printf("Client3\n");
-
-    /* pull_frame() will block until a frame is received.
-     *
-     * If that is not acceptable, a separate thread for the reader should be created */
-    uvgrtp::frame::rtp_frame *frame = nullptr;
-    printf("Client4\n");
-
-    for (;;)
+    // Retry to connect every second if connection failed
+    while ((rtp_stream = sess->create_stream(8889, 8888, RTP_FORMAT_GENERIC, RTP_NO_FLAGS)) == nullptr && !thread_exit)
     {
-        printf("Client4.5\n");
-        frame = hevc->pull_frame();
-        if (frame)
-        {
-            printf("Client5 '%s'\n", frame->payload);
-            (void)uvgrtp::frame::dealloc_frame(frame);
-            break;
-        }
+        printf("Failed to connect to %s\n", server_hostname.c_str());
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 
-    /* You can also specify for a timeout for the operation and if the a frame is not received 
-     * within that time limit, pull_frame() returns a nullptr 
-     *
-     * The parameter tells how long time a frame is waited in milliseconds */
-    printf("Client6\n");
-    frame = hevc->pull_frame(200);
+    printf("Succesfully connected to %s\n", server_hostname.c_str());
+    uvgrtp::frame::rtp_frame *frame = nullptr;
 
-    /* Frame must be freed manually */
-    uvgrtp::frame::dealloc_frame(frame);
+    const auto max_wait_ms = 200;
+    while (!thread_exit)
+    {
+        frame = rtp_stream->pull_frame(max_wait_ms);
+        if (frame)
+        {
+            printf("[Received from %s] '%s'\n", server_hostname.c_str(), frame->payload);
+            uvgrtp::frame::dealloc_frame(frame);
+        }
+    }
 
     ctx.destroy_session(sess);
     return 0;
@@ -118,8 +111,8 @@ int main()
 
     SDL_Rect sdlRect;
 
-    SDL_Thread *refresh_thread = SDL_CreateThread(refresh_video, NULL, NULL);
-    SDL_Thread *network_thread = SDL_CreateThread(network, NULL, NULL);
+    SDL_Thread *refresh_thread = SDL_CreateThread(refresh_video_thread_fn, NULL, NULL);
+    SDL_Thread *network_thread = SDL_CreateThread(network_thread_fn, NULL, NULL);
     SDL_Event event;
     bool isPlaying = true;
     while (1)
