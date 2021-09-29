@@ -2,6 +2,8 @@
 #define _CRT_SECURE_NO_WARNINGS
 #pragma warning(disable : 4996)
 #include "SDL.h"
+#include <lib.hh>
+
 #undef main
 const int bpp = 12;
 
@@ -31,6 +33,50 @@ int refresh_video(void *opaque)
     SDL_Event event;
     event.type = BREAK_EVENT;
     SDL_PushEvent(&event);
+    return 0;
+}
+
+int network(void *opaque)
+{
+    uvgrtp::context ctx;
+    printf("Client1\n");
+    /* See sending.cc for more details */
+    uvgrtp::session *sess = ctx.create_session("127.0.0.1");
+    printf("Client2\n");
+
+    /* See sending.cc for more details */
+    uvgrtp::media_stream *hevc = sess->create_stream(8889, 8888, RTP_FORMAT_GENERIC, RTP_NO_FLAGS);
+    printf("Client3\n");
+
+    /* pull_frame() will block until a frame is received.
+     *
+     * If that is not acceptable, a separate thread for the reader should be created */
+    uvgrtp::frame::rtp_frame *frame = nullptr;
+    printf("Client4\n");
+
+    for (;;)
+    {
+        printf("Client4.5\n");
+        frame = hevc->pull_frame();
+        if (frame)
+        {
+            printf("Client5 '%s'\n", frame->payload);
+            (void)uvgrtp::frame::dealloc_frame(frame);
+            break;
+        }
+    }
+
+    /* You can also specify for a timeout for the operation and if the a frame is not received 
+     * within that time limit, pull_frame() returns a nullptr 
+     *
+     * The parameter tells how long time a frame is waited in milliseconds */
+    printf("Client6\n");
+    frame = hevc->pull_frame(200);
+
+    /* Frame must be freed manually */
+    uvgrtp::frame::dealloc_frame(frame);
+
+    ctx.destroy_session(sess);
     return 0;
 }
 
@@ -73,6 +119,7 @@ int main()
     SDL_Rect sdlRect;
 
     SDL_Thread *refresh_thread = SDL_CreateThread(refresh_video, NULL, NULL);
+    SDL_Thread *network_thread = SDL_CreateThread(network, NULL, NULL);
     SDL_Event event;
     bool isPlaying = true;
     while (1)

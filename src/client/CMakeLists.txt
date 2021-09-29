@@ -2,7 +2,7 @@ set(APP_NAME pac-client)
 
 if(MSVC)
     add_executable(${APP_NAME} main.cpp)
-    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")
+    #set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")
 else()
     add_executable(${APP_NAME} main.cpp)
 endif()
@@ -21,10 +21,6 @@ add_custom_command(TARGET ${APP_NAME} POST_BUILD
 
 # WINSOCK2
 target_link_libraries(${APP_NAME} PUBLIC Ws2_32)
-
-# CRYPTO++
-SET(CRYPTOPP_PATH ${CMAKE_SOURCE_DIR}/libs/CRYPTOPP)
-target_include_directories(${APP_NAME} PUBLIC ${CRYPTOPP_PATH})
 
 # UVG
 SET(UVGRTP_PATH ${CMAKE_SOURCE_DIR}/libs/uvgRTP)
