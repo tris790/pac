@@ -12,7 +12,7 @@ const int bpp = 12;
 
 int screen_w = 1920, screen_h = 1000;
 const int pixel_w = 1920, pixel_h = 1080;
-unsigned char buffer[pixel_w * pixel_h * bpp / 8] = {0};
+unsigned char buffer[pixel_w * pixel_h * bpp / 8];
 
 //Refresh Event
 #define REFRESH_EVENT (SDL_USEREVENT + 1)
@@ -54,24 +54,20 @@ int network_thread_fn(void *opaque)
     // Retry to connect every second if connection failed
     while ((rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC)) == nullptr)
     {
-        printf("Failed to connect to %s\n", server_hostname.c_str());
+        printf("Failed to created a socket %s\n", server_hostname.c_str());
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 
-    printf("Succesfully connected to %s\n", server_hostname.c_str());
+    printf("Succesfully created a socket %s\n", server_hostname.c_str());
 
-    uvgrtp::frame::rtp_frame *start_frame = nullptr;
     while (!thread_exit)
     {
-        start_frame = rtp_stream->pull_frame();
-        if (start_frame->payload_len == 1)
-        {
-            printf("Received payload %" PRIu8 "\n", *start_frame->payload);
-        }
+        uvgrtp::frame::rtp_frame *start_frame = rtp_stream->pull_frame();
         if (start_frame && start_frame->payload_len == 1 && *start_frame->payload == 0)
         {
             printf("Received payload %" PRIu8 "\n", *start_frame->payload);
             uvgrtp::frame::dealloc_frame(start_frame);
+
             bool receivingFrame = true;
             int offset = 0;
             while (receivingFrame)
@@ -80,7 +76,6 @@ int network_thread_fn(void *opaque)
                 if (data_frame && data_frame->payload_len == 1)
                 {
                     receivingFrame = false;
-                    printf("Frame ended\n");
                 }
                 else
                 {
@@ -98,8 +93,6 @@ int network_thread_fn(void *opaque)
         SDL_Event event;
         event.type = REFRESH_EVENT;
         SDL_PushEvent(&event);
-        // memcpy(buffer, frame->payload, 1024);
-        // SDL_Delay(40);
     }
 
     ctx.destroy_session(session);
