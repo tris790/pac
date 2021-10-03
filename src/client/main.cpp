@@ -68,8 +68,8 @@ int network_thread_fn(void *opaque)
             printf("Received payload %" PRIu8 "\n", *start_frame->payload);
             uvgrtp::frame::dealloc_frame(start_frame);
 
-            bool receivingFrame = true;
             int offset = 0;
+            bool receivingFrame = true;
             while (receivingFrame)
             {
                 uvgrtp::frame::rtp_frame *data_frame = rtp_stream->pull_frame();
@@ -97,7 +97,6 @@ int network_thread_fn(void *opaque)
 
     ctx.destroy_session(session);
 
-    //Break
     SDL_Event event;
     event.type = BREAK_EVENT;
     SDL_PushEvent(&event);
@@ -136,7 +135,7 @@ int main()
     SDL_Thread *network_thread = SDL_CreateThread(network_thread_fn, NULL, NULL);
     SDL_Event event;
     bool isPlaying = true;
-    while (1)
+    while (true)
     {
         //Wait
         SDL_WaitEvent(&event);
