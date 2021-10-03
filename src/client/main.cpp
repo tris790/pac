@@ -22,24 +22,6 @@ unsigned char buffer[pixel_w * pixel_h * bpp / 8];
 // Multithread problem ?
 int thread_exit = 0;
 
-int refresh_video_thread_fn(void *opaque)
-{
-    thread_exit = 0;
-    while (thread_exit == 0)
-    {
-        SDL_Event event;
-        event.type = REFRESH_EVENT;
-        SDL_PushEvent(&event);
-        SDL_Delay(40);
-    }
-
-    //Break
-    SDL_Event event;
-    event.type = BREAK_EVENT;
-    SDL_PushEvent(&event);
-    return 0;
-}
-
 int network_thread_fn(void *opaque)
 {
     thread_exit = 0;
@@ -57,18 +39,20 @@ int network_thread_fn(void *opaque)
         printf("Failed to created a socket %s\n", server_hostname.c_str());
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
+    rtp_stream->configure_ctx(RCC_UDP_RCV_BUF_SIZE, 40 * 1000 * 1000);
+    rtp_stream->configure_ctx(RCC_UDP_SND_BUF_SIZE, 40 * 1000 * 1000);
 
     printf("Succesfully created a socket %s\n", server_hostname.c_str());
 
     while (!thread_exit)
     {
-        uvgrtp::frame::rtp_frame *start_frame = rtp_stream->pull_frame();
+        uvgrtp::frame::rtp_frame *start_frame = rtp_stream->pull_frame(5);
         if (start_frame && start_frame->payload_len == 1 && *start_frame->payload == 0)
         {
             printf("Received payload %" PRIu8 "\n", *start_frame->payload);
             uvgrtp::frame::dealloc_frame(start_frame);
 
-            int offset = 0;
+            size_t offset = 0;
             bool receivingFrame = true;
             while (receivingFrame)
             {
@@ -131,7 +115,6 @@ int main()
     SDL_Texture *sdlTexture = SDL_CreateTexture(sdlRenderer, pixformat, SDL_TEXTUREACCESS_STREAMING, pixel_w, pixel_h);
     SDL_Rect sdlRect;
 
-    SDL_Thread *refresh_thread = SDL_CreateThread(refresh_video_thread_fn, NULL, NULL);
     SDL_Thread *network_thread = SDL_CreateThread(network_thread_fn, NULL, NULL);
     SDL_Event event;
     bool isPlaying = true;
