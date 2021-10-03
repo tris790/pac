@@ -2,7 +2,7 @@ set(APP_NAME pac-client)
 
 if(MSVC)
     add_executable(${APP_NAME} main.cpp)
-    #set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")
 else()
     add_executable(${APP_NAME} main.cpp)
 endif()
