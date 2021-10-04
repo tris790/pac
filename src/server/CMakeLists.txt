@@ -7,6 +7,4 @@ target_link_libraries(${APP_NAME} PUBLIC Ws2_32)
 
 # UVG
 SET(UVGRTP_PATH ${CMAKE_SOURCE_DIR}/libs/uvgRTP)
-target_include_directories(${APP_NAME} PUBLIC ${UVGRTP_PATH}/include)
-target_link_directories(${APP_NAME} PUBLIC ${UVGRTP_PATH}/build/Release)
 target_link_libraries(${APP_NAME} PUBLIC uvgrtp)
