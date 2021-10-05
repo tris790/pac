@@ -6,7 +6,7 @@ const int bpp = 12;
 int screen_w = 1920, screen_h = 1000;
 const int pixel_w = 1920, pixel_h = 1080;
 size_t TOTAL_FRAME_LEN = pixel_w * pixel_h * bpp / 8;
-size_t MAX_DATAFRAME_LEN = 35840; //5120;
+size_t MAX_DATAFRAME_LEN = 1024; //5120;
 
 enum NETWORK_PACKET
 {
@@ -28,8 +28,6 @@ int main()
     // checkout RCC_UDP_SND_BUF_SIZE and RCC_UDP_RCV_BUF_SIZE
     // https://github.com/ultravideo/uvgRTP/issues/76
     uvgrtp::media_stream *rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC);
-    rtp_stream->configure_ctx(RCC_UDP_RCV_BUF_SIZE, 40 * 1000 * 1000);
-    rtp_stream->configure_ctx(RCC_UDP_SND_BUF_SIZE, 40 * 1000 * 1000);
 
     FILE *fp = NULL;
     fp = fopen("C:/Storage/Coding/c++/SdlVideo/x64/Release/output.yuv", "rb+");

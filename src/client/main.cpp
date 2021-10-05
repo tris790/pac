@@ -39,8 +39,6 @@ int network_thread_fn(void *opaque)
         printf("Failed to created a socket %s\n", server_hostname.c_str());
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
-    rtp_stream->configure_ctx(RCC_UDP_RCV_BUF_SIZE, 40 * 1000 * 1000);
-    rtp_stream->configure_ctx(RCC_UDP_SND_BUF_SIZE, 40 * 1000 * 1000);
 
     printf("Succesfully created a socket %s\n", server_hostname.c_str());
 
