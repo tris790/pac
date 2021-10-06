@@ -2,35 +2,62 @@
 <p align="center"><a href="https://vuejs.org" target="_blank" rel="noopener noreferrer"><img width="100" src="assets/tupac3.png" alt="Pac logo"></a></p>
 
 ## Prerequisite
-- [SDL2](https://www.libsdl.org/release/SDL2-devel-2.0.16-VC.zip)
-- [SDL2 mixer](https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-devel-2.0.4-VC.zip)
+- CMake
+- Ninja or Visual Studio 2019
+- g++ or Visual Studio 2019
 
-## Install SDL2
-### Windows
-1. Download [SDL2](https://www.libsdl.org/release/SDL2-devel-2.0.16-VC.zip) development libraries
-2. Extract the .zip file in the `src\lib` folder
-3. Rename the extracted folder to `SDL2`
-4. You should now have that hierarchy
-   
-   ![SDL2 hierarchy after unzip](assets/SDL2Hierarchy.png?raw=true "Title")
+## Dependencies
+- Downloaded, built, linked by CMake, view dependencies/CMakeLists.txt
 
-## Install SDL2 mixer
-1. Download [SDL2 mixer](https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-devel-2.0.4-VC.zip) development libraries
-2. Extract the .zip file in the `src\lib` folder
-3. Rename the extracted folder to `SDL2_mixer`
-4. You should now have that hierarchy
-   
-   ![SDL2_mixer hierarchy after unzip](assets/sdl2_mixerHierarchy.png?raw=true "Title2")
 ## Building
-### Server
-cd build
-Run once: 
-- Windows: `cmake -G "Visual Studio 16 2019" -A x64 -S ../ -B "build64"`
-- Linux: `cmake -G "Ninja" -S ../ -B "build64"`
+### Client and Server
+**cd build**
 
-Run to build: 
-- Debug: `cmake --build build64 --config Debug`
-- Release: `cmake --build build64 --config Release` add: -DCMAKE_CXX_COMPILER=PATH_TO_YOUR_COMPILER (run: which g++)
+### Debug
+###### Windows
+
+
+```shell
+cmake -G "Visual Studio 16 2019" -A x64 -S ../ -B "build64"
+```
+
+```shell
+cmake --build "build64" --config Debug
+```
+
+###### Linux:
+
+```shell
+cmake -G "Ninja" -S ../ -B "build64/Debug" -D CMAKE_BUILD_TYPE=Debug
+```
+
+```shell
+cmake --build "build64/Debug"
+```
+
+<br>
+
+### Release
+###### Windows
+
+
+```shell
+cmake -G "Visual Studio 16 2019" -A x64 -S ../ -B "build64"
+```
+
+```shell
+cmake --build "build64" --config Release
+```
+
+###### Linux:
+
+```shell
+cmake -G "Ninja" -S ../ -B "build64/Release" -D CMAKE_BUILD_TYPE=Release
+```
+
+```shell
+cmake --build "build64/Release"
+```
 
 ### Gstreamer screen capture
 

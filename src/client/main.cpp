@@ -3,6 +3,11 @@
 #pragma warning(disable : 4996)
 #include "SDL.h"
 #include "SDL_mixer.h"
+#include <lib.hh>
+#include <thread>
+#include <chrono>
+#include <inttypes.h>
+
 #undef main
 const int bpp = 12;
 
@@ -15,20 +20,66 @@ unsigned char buffer[pixel_w * pixel_h * bpp / 8];
 //Break
 #define BREAK_EVENT (SDL_USEREVENT + 2)
 
+// Multithread problem ?
 int thread_exit = 0;
 
-int refresh_video(void *opaque)
+int network_thread_fn(void *opaque)
 {
     thread_exit = 0;
-    while (thread_exit == 0)
+    uvgrtp::context ctx;
+    std::string server_hostname("127.0.0.1");
+    auto receive_port = 8889;
+    auto send_port = 8888;
+    uvgrtp::session *session = ctx.create_session(server_hostname);
+    printf("Connecting to %s:%d\n", server_hostname.c_str(), receive_port);
+    uvgrtp::media_stream *rtp_stream = nullptr;
+
+    // Retry to connect every second if connection failed
+    while ((rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC)) == nullptr)
     {
+        printf("Failed to created a socket %s\n", server_hostname.c_str());
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    }
+
+    printf("Succesfully created a socket %s\n", server_hostname.c_str());
+
+    while (!thread_exit)
+    {
+        uvgrtp::frame::rtp_frame *start_frame = rtp_stream->pull_frame(5);
+        if (start_frame && start_frame->payload_len == 1 && *start_frame->payload == 0)
+        {
+            printf("Received payload %" PRIu8 "\n", *start_frame->payload);
+            uvgrtp::frame::dealloc_frame(start_frame);
+
+            size_t offset = 0;
+            bool receivingFrame = true;
+            while (receivingFrame)
+            {
+                uvgrtp::frame::rtp_frame *data_frame = rtp_stream->pull_frame();
+                if (data_frame && data_frame->payload_len == 1)
+                {
+                    receivingFrame = false;
+                }
+                else
+                {
+                    memcpy(buffer + offset, data_frame->payload, data_frame->payload_len);
+                    offset += data_frame->payload_len;
+                }
+                uvgrtp::frame::dealloc_frame(data_frame);
+            }
+        }
+        else
+        {
+            uvgrtp::frame::dealloc_frame(start_frame);
+        }
+
         SDL_Event event;
         event.type = REFRESH_EVENT;
         SDL_PushEvent(&event);
-        SDL_Delay(40);
     }
-    thread_exit = 0;
-    //Break
+
+    ctx.destroy_session(session);
+
     SDL_Event event;
     event.type = BREAK_EVENT;
     SDL_PushEvent(&event);
@@ -66,60 +117,17 @@ int main()
     pixformat = SDL_PIXELFORMAT_IYUV;
 
     SDL_Texture *sdlTexture = SDL_CreateTexture(sdlRenderer, pixformat, SDL_TEXTUREACCESS_STREAMING, pixel_w, pixel_h);
-
-    FILE *fp = NULL;
-    fp = fopen("‪D:\Data_mick\Université\projet\pac\assets\output420.yuv", "rb+");
-
-    if (fp == NULL)
-    {
-        printf("cannot open this file\n");
-        return -1;
-    }
-
-
-   //audio file
-    // Set up the audio stream
-    int result = Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 512);
-    if (result < 0)
-    {
-        fprintf(stderr, "Unable to open audio: %s\n", SDL_GetError());
-        return -1;
-    }
-
-    result = Mix_AllocateChannels(4);
-    if (result < 0)
-    {
-        fprintf(stderr, "Unable to allocate mixing channels: %s\n", SDL_GetError());
-        return -1;
-    }
-
-    // Load waveforms
-    Mix_Chunk* _sample = Mix_LoadWAV("D:\Data_mick\Musique\Musique 320kbps torrent\Vendredi\All Night Long.wav");
-    if (_sample == NULL)
-    {
-        fprintf(stderr, "Unable to load wave file: %s\n", "D:\Data_mick\Musique\Musique 320kbps torrent\Vendredi\All Night Long.wav");
-    }
-
-
-
-
     SDL_Rect sdlRect;
 
-    SDL_Thread *refresh_thread = SDL_CreateThread(refresh_video, NULL, NULL);
+    SDL_Thread *network_thread = SDL_CreateThread(network_thread_fn, NULL, NULL);
     SDL_Event event;
     bool isPlaying = true;
-    while (1)
+    while (true)
     {
         //Wait
         SDL_WaitEvent(&event);
         if (event.type == REFRESH_EVENT && isPlaying)
         {
-            if (fread(buffer, 1, pixel_w * pixel_h * bpp / 8, fp) != pixel_w * pixel_h * bpp / 8)
-            {
-                // Loop
-                fseek(fp, 0, SEEK_SET);
-                fread(buffer, 1, pixel_w * pixel_h * bpp / 8, fp);
-            }
             SDL_UpdateTexture(sdlTexture, NULL, buffer, pixel_w);
 
             //FIX: If window is resize
