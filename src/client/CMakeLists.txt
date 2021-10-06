@@ -18,3 +18,14 @@ add_custom_command(TARGET ${APP_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${SDL2_PATH}/lib/x64/SDL2.dll"
         $<TARGET_FILE_DIR:${APP_NAME}>)
+
+# SDL 2 mixer
+SET(SDL2MIXER_PATH ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer)
+target_include_directories(${APP_NAME} PUBLIC ${SDL2MIXER_PATH}/include)
+target_link_directories(${APP_NAME} PUBLIC ${SDL2MIXER_PATH}/lib/x64)
+target_link_libraries(${APP_NAME} PUBLIC SDL2_MIXER)
+
+add_custom_command(TARGET ${APP_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${SDL2MIXER_PATH}/lib/x64/SDL2_mixer.dll"
+        $<TARGET_FILE_DIR:${APP_NAME}>)
