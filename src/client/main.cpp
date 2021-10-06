@@ -1,7 +1,8 @@
-#include <stdio.h>
+﻿#include <stdio.h>
 #define _CRT_SECURE_NO_WARNINGS
 #pragma warning(disable : 4996)
 #include "SDL.h"
+#include "SDL_mixer.h"
 #undef main
 const int bpp = 12;
 
@@ -41,6 +42,11 @@ int main()
         printf("Could not initialize SDL - %s\n", SDL_GetError());
         return -1;
     }
+    if (SDL_Init(SDL_INIT_AUDIO))
+    {
+        printf("Could not initialize SDL mixer - %s\n", SDL_GetError());
+        return -1;
+    }
 
     SDL_Window *screen;
     //SDL 2.0 Support for multiple windows
@@ -62,13 +68,40 @@ int main()
     SDL_Texture *sdlTexture = SDL_CreateTexture(sdlRenderer, pixformat, SDL_TEXTUREACCESS_STREAMING, pixel_w, pixel_h);
 
     FILE *fp = NULL;
-    fp = fopen("C:/Storage/Coding/c++/SdlVideo/x64/Release/output.yuv", "rb+");
+    fp = fopen("‪D:\Data_mick\Université\projet\pac\assets\output420.yuv", "rb+");
 
     if (fp == NULL)
     {
         printf("cannot open this file\n");
         return -1;
     }
+
+
+   //audio file
+    // Set up the audio stream
+    int result = Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 512);
+    if (result < 0)
+    {
+        fprintf(stderr, "Unable to open audio: %s\n", SDL_GetError());
+        return -1;
+    }
+
+    result = Mix_AllocateChannels(4);
+    if (result < 0)
+    {
+        fprintf(stderr, "Unable to allocate mixing channels: %s\n", SDL_GetError());
+        return -1;
+    }
+
+    // Load waveforms
+    Mix_Chunk* _sample = Mix_LoadWAV("D:\Data_mick\Musique\Musique 320kbps torrent\Vendredi\All Night Long.wav");
+    if (_sample == NULL)
+    {
+        fprintf(stderr, "Unable to load wave file: %s\n", "D:\Data_mick\Musique\Musique 320kbps torrent\Vendredi\All Night Long.wav");
+    }
+
+
+
 
     SDL_Rect sdlRect;
 

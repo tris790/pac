@@ -2,18 +2,25 @@
 <p align="center"><a href="https://vuejs.org" target="_blank" rel="noopener noreferrer"><img width="100" src="assets/tupac3.png" alt="Pac logo"></a></p>
 
 ## Prerequisite
-- [SDL2](https://www.libsdl.org/download-2.0.php)
+- [SDL2](https://www.libsdl.org/release/SDL2-devel-2.0.16-VC.zip)
+- [SDL2 mixer](https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-devel-2.0.4-VC.zip)
 
 ## Install SDL2
 ### Windows
-1. Download [SDL2](https://www.libsdl.org/download-2.0.php) development libraries
+1. Download [SDL2](https://www.libsdl.org/release/SDL2-devel-2.0.16-VC.zip) development libraries
 2. Extract the .zip file in the `src\lib` folder
 3. Rename the extracted folder to `SDL2`
 4. You should now have that hierarchy
    
    ![SDL2 hierarchy after unzip](assets/SDL2Hierarchy.png?raw=true "Title")
 
-
+## Install SDL2 mixer
+1. Download [SDL2 mixer](https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-devel-2.0.4-VC.zip) development libraries
+2. Extract the .zip file in the `src\lib` folder
+3. Rename the extracted folder to `SDL2_mixer`
+4. You should now have that hierarchy
+   
+   ![SDL2_mixer hierarchy after unzip](assets/sdl2_mixerHierarchy.png?raw=true "Title2")
 ## Building
 ### Server
 cd build
