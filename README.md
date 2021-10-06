@@ -13,23 +13,6 @@
 ### Client and Server
 **cd build**
 
-Windows:    
-`cmake -G "Visual Studio 16 2019" -A x64 -S ../ -B "build64"`
-- Debug:
-	`cmake --build "build64" --config Debug`
-- Release:
-	`cmake --build "build64" --config Release`
-
-Linux:  
-- Debug:
-	`cmake -S . -B "build64/Debug" -G "Ninja" -D CMAKE_BUILD_TYPE=Debug`
-	`cmake --build "build64/Debug"
-- Release: 
-	`cmake -S . -B "build64/Release" -G "Ninja" -D CMAKE_BUILD_TYPE=Release`
-	`cmake --build "build64/Release"
-
-<hr>
-
 ### Debug
 ###### Windows
 
