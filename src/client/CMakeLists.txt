@@ -11,6 +11,9 @@ target_compile_features(${APP_NAME} PRIVATE cxx_std_17)
 # SDL 2
 target_link_libraries(${APP_NAME} PUBLIC SDL2)
 
+# SDL 2 Mixer
+target_link_libraries(${APP_NAME} PUBLIC SDL2_MIXER)
+
 # WINSOCK2
 if(WIN32)
     target_link_libraries(${APP_NAME} PUBLIC Ws2_32)
