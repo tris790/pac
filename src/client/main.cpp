@@ -7,6 +7,7 @@
 #include <thread>
 #include <chrono>
 #include <inttypes.h>
+#include <string.h>
 
 #undef main
 const int bpp = 12;
@@ -88,14 +89,9 @@ int network_thread_fn(void *opaque)
 
 int main()
 {
-    if (SDL_Init(SDL_INIT_VIDEO))
+    if (SDL_Init(SDL_INIT_VIDEO| SDL_INIT_AUDIO))
     {
         printf("Could not initialize SDL - %s\n", SDL_GetError());
-        return -1;
-    }
-    if (SDL_Init(SDL_INIT_AUDIO))
-    {
-        printf("Could not initialize SDL mixer - %s\n", SDL_GetError());
         return -1;
     }
 
@@ -110,6 +106,31 @@ int main()
         return -1;
     }
     SDL_Renderer *sdlRenderer = SDL_CreateRenderer(screen, -1, 0);
+#pragma region mixer
+    int result = Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 512);
+    if (result < 0)
+    {
+        fprintf(stderr, "Unable to open audio: %s\n", SDL_GetError());
+        exit(-1);
+    }
+
+    result = Mix_AllocateChannels(4);
+    if (result < 0)
+    {
+        fprintf(stderr, "Unable to allocate mixing channels: %s\n", SDL_GetError());
+        exit(-1);
+    }
+    
+    Mix_Chunk* mmusic;
+    std::string path = SDL_GetBasePath();
+    path.append("..\\..\\..\\..\\..\\assets\\Beyond.wav");
+    mmusic = Mix_LoadWAV(path.c_str());
+    if (mmusic == NULL)
+    {
+        fprintf(stderr, "Unable to load wave file: %s\n", path.c_str());
+    }
+    
+#pragma endregion mixer
 
     Uint32 pixformat = 0;
     //IYUV: Y + U + V  (3 planes)
@@ -122,6 +143,8 @@ int main()
     SDL_Thread *network_thread = SDL_CreateThread(network_thread_fn, NULL, NULL);
     SDL_Event event;
     bool isPlaying = true;
+    Mix_PlayChannel(1, mmusic, 0);
+    
     while (true)
     {
         //Wait
@@ -149,6 +172,14 @@ int main()
             else if (event.key.keysym.sym == SDLK_SPACE)
             {
                 isPlaying = !isPlaying;
+                if (isPlaying)
+                {
+                    Mix_Resume(1);
+                }
+                else
+                {
+                    Mix_Pause(1);
+                }
             }
         }
         else if (event.type == SDL_WINDOWEVENT)
@@ -165,6 +196,9 @@ int main()
             break;
         }
     }
+
+    Mix_FreeChunk(mmusic);
+    Mix_CloseAudio();
     SDL_Quit();
     return 0;
 }

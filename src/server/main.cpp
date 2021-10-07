@@ -1,7 +1,7 @@
 #include <iostream>
 #include <lib.hh>
 #include <vector>
-
+#include <string.h>
 const int bpp = 12;
 int screen_w = 1920, screen_h = 1000;
 const int pixel_w = 1920, pixel_h = 1080;
@@ -14,7 +14,7 @@ enum NETWORK_PACKET
     END_FRAME
 };
 
-int main()
+int main(int argc, char* argv[])
 {
     std::string hostname("127.0.0.1");
     auto receive_port = 8888;
@@ -29,12 +29,14 @@ int main()
     // https://github.com/ultravideo/uvgRTP/issues/76
     uvgrtp::media_stream *rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC);
 
+    std::string path = argv[0];
+    path.append("\\..\\..\\..\\..\\..\\..\\assets\\output.yuv");
     FILE *fp = NULL;
-    fp = fopen("C:/Storage/Coding/c++/SdlVideo/x64/Release/output.yuv", "rb+");
+    fp = fopen(path.c_str(), "rb+");
 
     if (fp == NULL)
     {
-        printf("cannot open this file\n");
+        printf("cannot open this file %s\n",path.c_str());
         return -1;
     }
 

@@ -5,3 +5,7 @@ libs/**
 .vs/
 .vscode/
 assets/output420.yuv
+
+assets/output.yuv
+
+assets/Beyond.wav
