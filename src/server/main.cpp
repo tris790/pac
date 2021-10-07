@@ -39,7 +39,7 @@ int main()
         return -1;
     }
 
-    for (;;)
+    while (true)
     {
         // Read frame from file
         if (fread(buffer, 1, TOTAL_FRAME_LEN, fp) != TOTAL_FRAME_LEN)
@@ -47,9 +47,9 @@ int main()
             // Loop
             fseek(fp, 0, SEEK_SET);
             fread(buffer, 1, TOTAL_FRAME_LEN, fp);
+            printf("Start sending video to client");
         }
 
-        printf("Sending frame to the client\n");
         // Send frame header
         uint8_t data = NETWORK_PACKET::START_FRAME;
         rtp_stream->push_frame((uint8_t *)(&data), 1, RTP_NO_FLAGS);
