@@ -106,31 +106,29 @@ int main()
         return -1;
     }
     SDL_Renderer *sdlRenderer = SDL_CreateRenderer(screen, -1, 0);
-#pragma region mixer
-    int result = Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 512);
-    if (result < 0)
+
+    // Initialisation mixer
+    int audiomixer = Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 512);
+    if (audiomixer < 0)
     {
         fprintf(stderr, "Unable to open audio: %s\n", SDL_GetError());
         exit(-1);
     }
 
-    result = Mix_AllocateChannels(4);
-    if (result < 0)
+    audiomixer = Mix_AllocateChannels(4);
+    if (audiomixer < 0)
     {
         fprintf(stderr, "Unable to allocate mixing channels: %s\n", SDL_GetError());
         exit(-1);
     }
     
     Mix_Chunk* mmusic;
-    std::string path = SDL_GetBasePath();
-    path.append("..\\..\\..\\..\\..\\assets\\Beyond.wav");
+    std::string path = "D:/Data_mick/Universite/projet/pac/assets/Beyond.wav";
     mmusic = Mix_LoadWAV(path.c_str());
     if (mmusic == NULL)
     {
         fprintf(stderr, "Unable to load wave file: %s\n", path.c_str());
     }
-    
-#pragma endregion mixer
 
     Uint32 pixformat = 0;
     //IYUV: Y + U + V  (3 planes)
@@ -143,7 +141,8 @@ int main()
     SDL_Thread *network_thread = SDL_CreateThread(network_thread_fn, NULL, NULL);
     SDL_Event event;
     bool isPlaying = true;
-    Mix_PlayChannel(1, mmusic, 0);
+    //Lance la musique depuis le début du fichier
+    Mix_PlayChannel(1, mmusic, -1);
     
     while (true)
     {
@@ -174,10 +173,12 @@ int main()
                 isPlaying = !isPlaying;
                 if (isPlaying)
                 {
+                    //Relance la musique d'ou elle était rendu
                     Mix_Resume(1);
                 }
                 else
                 {
+                    //Met la musique en pause
                     Mix_Pause(1);
                 }
             }

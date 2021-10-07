@@ -14,7 +14,7 @@ enum NETWORK_PACKET
     END_FRAME
 };
 
-int main(int argc, char* argv[])
+int main()
 {
     std::string hostname("127.0.0.1");
     auto receive_port = 8888;
@@ -29,8 +29,7 @@ int main(int argc, char* argv[])
     // https://github.com/ultravideo/uvgRTP/issues/76
     uvgrtp::media_stream *rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC);
 
-    std::string path = argv[0];
-    path.append("\\..\\..\\..\\..\\..\\..\\assets\\output.yuv");
+    std::string path = "D:/Data_mick/Universite/projet/pac/assets/output.yuv";
     FILE *fp = NULL;
     fp = fopen(path.c_str(), "rb+");
 

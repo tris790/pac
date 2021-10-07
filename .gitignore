@@ -4,8 +4,5 @@ libs/**
 !libs/.gitkeep
 .vs/
 .vscode/
-assets/output420.yuv
-
-assets/output.yuv
-
-assets/Beyond.wav
+assets/*.yuv
+assets/*.wav
