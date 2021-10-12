@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
     auto pipeline_args = "dx9screencapsrc x=100 y=100 width=320 height=240 ! videoconvert ! autovideosink";
 #else
-    auto pipeline_args = "gst-launch-1.0 ximagesrc startx=0 starty=0 use-damage=0 xid=83886082 ! video/x-raw,framerate=60/1 ! videoscale method=0 ! video/x-raw,width=1920,height=1080  ! autovideosink sync=false";
+    auto pipeline_args = "ximagesrc startx=1280 use-damage=0 ! video/x-raw,framerate=30/1 ! videoscale method=0 ! video/x-raw,width=640,height=480  ! ximagesink";
 #endif
     pipeline = gst_parse_launch(pipeline_args, NULL);
 

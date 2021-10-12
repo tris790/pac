@@ -1,13 +1,11 @@
-﻿#include <stdio.h>
+#include <stdio.h>
 #define _CRT_SECURE_NO_WARNINGS
 #pragma warning(disable : 4996)
 #include "SDL.h"
-#include "SDL_mixer.h"
 #include <lib.hh>
 #include <thread>
 #include <chrono>
 #include <inttypes.h>
-#include <string.h>
 
 #undef main
 const int bpp = 12;
@@ -89,7 +87,7 @@ int network_thread_fn(void *opaque)
 
 int main()
 {
-    if (SDL_Init(SDL_INIT_VIDEO| SDL_INIT_AUDIO))
+    if (SDL_Init(SDL_INIT_VIDEO))
     {
         printf("Could not initialize SDL - %s\n", SDL_GetError());
         return -1;
@@ -107,29 +105,6 @@ int main()
     }
     SDL_Renderer *sdlRenderer = SDL_CreateRenderer(screen, -1, 0);
 
-    // Initialisation mixer
-    int audiomixer = Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 512);
-    if (audiomixer < 0)
-    {
-        fprintf(stderr, "Unable to open audio: %s\n", SDL_GetError());
-        exit(-1);
-    }
-
-    audiomixer = Mix_AllocateChannels(4);
-    if (audiomixer < 0)
-    {
-        fprintf(stderr, "Unable to allocate mixing channels: %s\n", SDL_GetError());
-        exit(-1);
-    }
-    
-    Mix_Chunk* mmusic;
-    std::string path = "D:/Data_mick/Universite/projet/pac/assets/Beyond.wav";
-    mmusic = Mix_LoadWAV(path.c_str());
-    if (mmusic == NULL)
-    {
-        fprintf(stderr, "Unable to load wave file: %s\n", path.c_str());
-    }
-
     Uint32 pixformat = 0;
     //IYUV: Y + U + V  (3 planes)
     //YV12: Y + V + U  (3 planes)
@@ -141,9 +116,6 @@ int main()
     SDL_Thread *network_thread = SDL_CreateThread(network_thread_fn, NULL, NULL);
     SDL_Event event;
     bool isPlaying = true;
-    //Lance la musique depuis le début du fichier
-    Mix_PlayChannel(1, mmusic, -1);
-    
     while (true)
     {
         //Wait
@@ -171,16 +143,6 @@ int main()
             else if (event.key.keysym.sym == SDLK_SPACE)
             {
                 isPlaying = !isPlaying;
-                if (isPlaying)
-                {
-                    //Relance la musique d'ou elle était rendu
-                    Mix_Resume(1);
-                }
-                else
-                {
-                    //Met la musique en pause
-                    Mix_Pause(1);
-                }
             }
         }
         else if (event.type == SDL_WINDOWEVENT)
@@ -197,9 +159,6 @@ int main()
             break;
         }
     }
-
-    Mix_FreeChunk(mmusic);
-    Mix_CloseAudio();
     SDL_Quit();
     return 0;
 }
