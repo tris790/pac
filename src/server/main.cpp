@@ -1,74 +1,58 @@
-#include <iostream>
-#include <lib.hh>
-#include <vector>
-#include <string.h>
-const int bpp = 12;
-int screen_w = 1920, screen_h = 1000;
-const int pixel_w = 1920, pixel_h = 1080;
-size_t TOTAL_FRAME_LEN = pixel_w * pixel_h * bpp / 8;
-size_t MAX_DATAFRAME_LEN = 1024; //5120;
+#include <gst/gst.h>
+#include <glib.h>
 
-enum NETWORK_PACKET
+int main(int argc, char *argv[])
 {
-    START_FRAME,
-    END_FRAME
-};
+    GstElement *pipeline;
+    GstBus *bus;
+    GstMessage *msg;
 
-int main()
-{
-    std::string hostname("127.0.0.1");
-    auto receive_port = 8888;
-    auto send_port = 8889;
-    auto buffer = new unsigned char[TOTAL_FRAME_LEN];
+    /* Initialize GStreamer */
+    gst_init(&argc, &argv);
 
-    uvgrtp::context ctx;
-    printf("Initializing the server\n");
-    uvgrtp::session *session = ctx.create_session(hostname.c_str());
-    printf("Initializing the server\n");
-    // checkout RCC_UDP_SND_BUF_SIZE and RCC_UDP_RCV_BUF_SIZE
-    // https://github.com/ultravideo/uvgRTP/issues/76
-    uvgrtp::media_stream *rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC);
+    /* Build the pipeline */
+#ifdef _WIN32
+    auto pipeline_args = "dx9screencapsrc x=100 y=100 width=320 height=240 ! videoconvert ! autovideosink";
+#else
+    auto pipeline_args = "gst-launch-1.0 ximagesrc startx=0 starty=0 use-damage=0 xid=83886082 ! video/x-raw,framerate=60/1 ! videoscale method=0 ! video/x-raw,width=1920,height=1080  ! autovideosink sync=false";
+#endif
+    pipeline = gst_parse_launch(pipeline_args, NULL);
 
-    std::string path = "D:/Data_mick/Universite/projet/pac/assets/output.yuv";
-    FILE *fp = NULL;
-    fp = fopen(path.c_str(), "rb+");
+    /* Start playing */
+    gst_element_set_state(pipeline, GST_STATE_PLAYING);
 
-    if (fp == NULL)
+    /* Wait until error or EOS */
+    bus = gst_element_get_bus(pipeline);
+    msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
+                                     (GstMessageType)(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
+
+    switch (GST_MESSAGE_TYPE(msg))
     {
-        printf("cannot open this file %s\n",path.c_str());
-        return -1;
+    case GST_MESSAGE_ERROR:
+    {
+        GError *err;
+        gchar *debug;
+
+        gst_message_parse_error(msg, &err, &debug);
+        g_print("Error: %s\n", err->message);
+        g_error_free(err);
+        g_free(debug);
+
+        break;
+    }
+    case GST_MESSAGE_EOS:
+        /* end-of-stream */
+        break;
+    default:
+        /* unhandled message */
+        break;
     }
 
-    while (true)
-    {
-        // Read frame from file
-        if (fread(buffer, 1, TOTAL_FRAME_LEN, fp) != TOTAL_FRAME_LEN)
-        {
-            // Loop
-            fseek(fp, 0, SEEK_SET);
-            fread(buffer, 1, TOTAL_FRAME_LEN, fp);
-            printf("Start sending video to client");
-        }
-
-        // Send frame header
-        uint8_t data = NETWORK_PACKET::START_FRAME;
-        rtp_stream->push_frame((uint8_t *)(&data), 1, RTP_NO_FLAGS);
-
-        // Send chunks of the frame
-        int sent = 0;
-        while (TOTAL_FRAME_LEN - sent > MAX_DATAFRAME_LEN)
-        {
-            rtp_stream->push_frame((uint8_t *)(buffer + sent), MAX_DATAFRAME_LEN, RTP_NO_FLAGS);
-            sent += MAX_DATAFRAME_LEN;
-        }
-        rtp_stream->push_frame((uint8_t *)(buffer + sent), TOTAL_FRAME_LEN - sent, RTP_NO_FLAGS);
-
-        // Send frame ending
-        data = NETWORK_PACKET::END_FRAME;
-        rtp_stream->push_frame((uint8_t *)(&data), 1, RTP_NO_FLAGS);
-        std::this_thread::sleep_for(std::chrono::milliseconds(13));
-    }
-
-    ctx.destroy_session(session);
+    /* Free resources */
+    if (msg != NULL)
+        gst_message_unref(msg);
+    gst_object_unref(bus);
+    gst_element_set_state(pipeline, GST_STATE_NULL);
+    gst_object_unref(pipeline);
     return 0;
 }
