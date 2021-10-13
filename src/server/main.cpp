@@ -34,7 +34,6 @@ GstFlowReturn new_sample(GstAppSink *appsink, CustomData *customData)
     GstBuffer *buffer = gst_sample_get_buffer(sample);
     static GstStructure *s;
     const GstStructure *info = gst_sample_get_info(sample);
-
     // ---- Read frame and convert to opencv format ---------------
     GstMapInfo map;
     gst_buffer_map(buffer, &map, GST_MAP_READ);
@@ -91,7 +90,7 @@ int main(int argc, char *argv[])
     auto pipeline_args = "dx9screencapsrc width=1920 height=1080 ! video/x-raw,framerate=60/1 ! appsink name=sink";
     // auto pipeline_args = "dx9screencapsrc x=100 y=100 width=320 height=240 ! videoconvert ! autovideosink";
 #else
-    auto pipeline_args = "ximagesrc startx=1280 use-damage=0 ! video/x-raw,framerate=30/1 ! videoscale method=0 ! video/x-raw,width=640,height=480  ! ximagesink";
+    auto pipeline_args = "ximagesrc startx=2560 starty=0 endx=4480 endy=1080 use-damage=0 ! video/x-raw,framerate=5/1 ! appsink name=sink";    
 #endif
     pipeline = gst_parse_launch(pipeline_args, NULL);
 
@@ -99,7 +98,7 @@ int main(int argc, char *argv[])
     gst_app_sink_set_emit_signals((GstAppSink *)sink, true);
     gst_app_sink_set_drop((GstAppSink *)sink, true);
     gst_app_sink_set_max_buffers((GstAppSink *)sink, 1);
-    GstAppSinkCallbacks callbacks = {NULL, NULL, (GstFlowReturn(__cdecl *)(GstAppSink *, gpointer))new_sample};
+    GstAppSinkCallbacks callbacks = {NULL, NULL, (GstFlowReturn (*)(GstAppSink*, gpointer))new_sample};
     gst_app_sink_set_callbacks(GST_APP_SINK(sink), &callbacks, &socketData, NULL);
 
     /* Start playing */

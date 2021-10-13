@@ -7,6 +7,7 @@
 #include <thread>
 #include <chrono>
 #include <inttypes.h>
+#include "SDL_mixer.h"
 
 #undef main
 const int bpp = 12;
@@ -122,7 +123,7 @@ int main()
     }
 
     Mix_Chunk *mmusic;
-    std::string path = "D:/Data_mick/Universite/projet/pac/assets/Beyond.wav";
+    std::string path = "/home/tris/Downloads/Ensoniq-ZR-76-01-Dope-77.wav";
     mmusic = Mix_LoadWAV(path.c_str());
     if (mmusic == NULL)
     {
