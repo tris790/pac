@@ -14,7 +14,7 @@ const int bpp = 12;
 
 int screen_w = 1920, screen_h = 1000;
 const int pixel_w = 1920, pixel_h = 1080;
-unsigned char buffer[pixel_w * pixel_h * bpp / 8];
+unsigned char buffer[pixel_w * pixel_h * 4];
 
 //Refresh Event
 #define REFRESH_EVENT (SDL_USEREVENT + 1)
@@ -89,7 +89,7 @@ int network_thread_fn(void *opaque)
 
 int main()
 {
-    if (SDL_Init(SDL_INIT_VIDEO| SDL_INIT_AUDIO))
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     {
         printf("Could not initialize SDL - %s\n", SDL_GetError());
         return -1;
@@ -121,8 +121,8 @@ int main()
         fprintf(stderr, "Unable to allocate mixing channels: %s\n", SDL_GetError());
         exit(-1);
     }
-    
-    Mix_Chunk* mmusic;
+
+    Mix_Chunk *mmusic;
     std::string path = "D:/Data_mick/Universite/projet/pac/assets/Beyond.wav";
     mmusic = Mix_LoadWAV(path.c_str());
     if (mmusic == NULL)
@@ -133,7 +133,7 @@ int main()
     Uint32 pixformat = 0;
     //IYUV: Y + U + V  (3 planes)
     //YV12: Y + V + U  (3 planes)
-    pixformat = SDL_PIXELFORMAT_IYUV;
+    pixformat = SDL_PIXELFORMAT_RGB888;
 
     SDL_Texture *sdlTexture = SDL_CreateTexture(sdlRenderer, pixformat, SDL_TEXTUREACCESS_STREAMING, pixel_w, pixel_h);
     SDL_Rect sdlRect;
@@ -143,14 +143,14 @@ int main()
     bool isPlaying = true;
     //Lance la musique depuis le début du fichier
     Mix_PlayChannel(1, mmusic, -1);
-    
+
     while (true)
     {
         //Wait
         SDL_WaitEvent(&event);
         if (event.type == REFRESH_EVENT && isPlaying)
         {
-            SDL_UpdateTexture(sdlTexture, NULL, buffer, pixel_w);
+            SDL_UpdateTexture(sdlTexture, NULL, buffer, pixel_w * 4);
 
             //FIX: If window is resize
             sdlRect.x = 0;
