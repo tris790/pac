@@ -1,13 +1,11 @@
-﻿#include <stdio.h>
+#include <stdio.h>
 #define _CRT_SECURE_NO_WARNINGS
 #pragma warning(disable : 4996)
 #include "SDL.h"
-#include "SDL_mixer.h"
 #include <lib.hh>
 #include <thread>
 #include <chrono>
 #include <inttypes.h>
-#include <string.h>
 
 #undef main
 const int bpp = 12;
@@ -171,16 +169,6 @@ int main()
             else if (event.key.keysym.sym == SDLK_SPACE)
             {
                 isPlaying = !isPlaying;
-                if (isPlaying)
-                {
-                    //Relance la musique d'ou elle était rendu
-                    Mix_Resume(1);
-                }
-                else
-                {
-                    //Met la musique en pause
-                    Mix_Pause(1);
-                }
             }
         }
         else if (event.type == SDL_WINDOWEVENT)
@@ -197,9 +185,6 @@ int main()
             break;
         }
     }
-
-    Mix_FreeChunk(mmusic);
-    Mix_CloseAudio();
     SDL_Quit();
     return 0;
 }
