@@ -38,7 +38,7 @@ GstFlowReturn new_sample(GstAppSink *appsink, CustomData *customData)
     // ---- Read frame and convert to opencv format ---------------
     GstMapInfo map;
     gst_buffer_map(buffer, &map, GST_MAP_READ);
-
+    printf("size: %lld\n", map.size);
     // SOCKET
     // Send frame header
     uint8_t data = NETWORK_PACKET::START_FRAME;

@@ -2,6 +2,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #pragma warning(disable : 4996)
 #include "SDL.h"
+#include "SDL_mixer.h"
 #include <lib.hh>
 #include <thread>
 #include <chrono>
