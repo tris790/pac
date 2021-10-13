@@ -7,7 +7,6 @@
 #include <thread>
 #include <chrono>
 #include <inttypes.h>
-#include "SDL_mixer.h"
 
 #undef main
 const int bpp = 12;
