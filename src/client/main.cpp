@@ -127,7 +127,7 @@ int main()
     }
 
     Mix_Chunk *mmusic;
-    std::string path = "/home/tris/Downloads/Ensoniq-ZR-76-01-Dope-77.wav";
+    std::string path = "D:/Data_mick/Universite/projet/pac/assets/Beyond.wav"
     mmusic = Mix_LoadWAV(path.c_str());
     if (mmusic == NULL)
     {
