@@ -8,13 +8,8 @@
 #include <lib.hh>
 #include <vector>
 #include <string.h>
-size_t MAX_DATAFRAME_LEN = 1024; // 1518 default max linux;
-
-enum NETWORK_PACKET
-{
-    START_FRAME,
-    END_FRAME
-};
+#include <assert.h>
+#include "pac_network.h"
 
 typedef struct _CustomData
 {
@@ -23,31 +18,40 @@ typedef struct _CustomData
 
 GstFlowReturn frame_recorded_callback(GstAppSink *appsink, CustomData *customData)
 {
+    // Pulling the frame from gstreamer
     GstSample *sample = gst_app_sink_pull_sample(appsink);
     GstBuffer *buffer = gst_sample_get_buffer(sample);
-    GstMapInfo map;
-    gst_buffer_map(buffer, &map, GST_MAP_READ);
-    printf("size: %lld\n", map.size);
+    GstMapInfo video_frame_info;
+    gst_buffer_map(buffer, &video_frame_info, GST_MAP_READ);
+    printf("size: %lld\n", video_frame_info.size);
 
     // SOCKET
-    // Send frame header
-    uint8_t data = NETWORK_PACKET::START_FRAME;
-    customData->rtp_stream->push_frame((uint8_t *)(&data), 1, RTP_NO_FLAGS);
+    NetworkPacket video_network_packet = {
+        NETWORK_PACKET_TYPE::VIDEO, // packet_type
+        0,                          // buffer_offset
+        NULL                        // data
+    };
 
-    // Send chunks of the frame
-    size_t sent = 0;
-    while (map.size - sent > MAX_DATAFRAME_LEN)
+    int byte_size_to_send = sizeof(video_network_packet.data);
+    while (byte_size_to_send > 0)
     {
-        customData->rtp_stream->push_frame((uint8_t *)(map.data + sent), MAX_DATAFRAME_LEN, RTP_NO_FLAGS);
-        sent += MAX_DATAFRAME_LEN;
+        // TODO: we don't "need" this memcpy, when we can fit a whole encoded video frame into a single network frame
+        // we can remove this (right now we need it because we want to send a chunk of the video frame
+        // and some metadata like the packet type and buf_offset)
+        memcpy(video_network_packet.data, video_frame_info.data + video_network_packet.buffer_offset, byte_size_to_send);
+        customData->rtp_stream->push_frame((uint8_t *)&video_network_packet, sizeof(NetworkPacket), RTP_NO_FLAGS);
+        video_network_packet.buffer_offset += byte_size_to_send;
+
+        if (video_network_packet.buffer_offset + byte_size_to_send > video_frame_info.size)
+        {
+            // We don't have a full frame left to send
+            byte_size_to_send = video_frame_info.size - video_network_packet.buffer_offset;
+        }
     }
-    customData->rtp_stream->push_frame((uint8_t *)(map.data + sent), map.size - sent, RTP_NO_FLAGS);
+    video_network_packet.packet_type = NETWORK_PACKET_TYPE::FLUSH_SCREEN;
+    customData->rtp_stream->push_frame((uint8_t *)&video_network_packet, sizeof(NetworkPacket), RTP_NO_FLAGS);
 
-    // Send frame ending
-    data = NETWORK_PACKET::END_FRAME;
-    customData->rtp_stream->push_frame((uint8_t *)(&data), 1, RTP_NO_FLAGS);
-
-    gst_buffer_unmap(buffer, &map);
+    gst_buffer_unmap(buffer, &video_frame_info);
     gst_sample_unref(sample);
     return GST_FLOW_OK;
 }
