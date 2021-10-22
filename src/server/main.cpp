@@ -8,7 +8,7 @@
 #include <lib.hh>
 #include <vector>
 #include <string.h>
-size_t MAX_DATAFRAME_LEN = 1024; //5120;
+size_t MAX_DATAFRAME_LEN = 1024; // 1518 default max linux;
 
 enum NETWORK_PACKET
 {
@@ -21,30 +21,21 @@ typedef struct _CustomData
     uvgrtp::media_stream *rtp_stream;
 } CustomData;
 
-GstFlowReturn new_sample(GstAppSink *appsink, CustomData *customData)
+GstFlowReturn frame_recorded_callback(GstAppSink *appsink, CustomData *customData)
 {
-    printf("CAPTURE FRAME\n");
-    static int framecount = 0;
-    framecount++;
-
-    static int width = 0, height = 0;
-
     GstSample *sample = gst_app_sink_pull_sample(appsink);
-    GstCaps *caps = gst_sample_get_caps(sample);
     GstBuffer *buffer = gst_sample_get_buffer(sample);
-    static GstStructure *s;
-    const GstStructure *info = gst_sample_get_info(sample);
-    // ---- Read frame and convert to opencv format ---------------
     GstMapInfo map;
     gst_buffer_map(buffer, &map, GST_MAP_READ);
     printf("size: %lld\n", map.size);
+
     // SOCKET
     // Send frame header
     uint8_t data = NETWORK_PACKET::START_FRAME;
     customData->rtp_stream->push_frame((uint8_t *)(&data), 1, RTP_NO_FLAGS);
 
     // Send chunks of the frame
-    int sent = 0;
+    size_t sent = 0;
     while (map.size - sent > MAX_DATAFRAME_LEN)
     {
         customData->rtp_stream->push_frame((uint8_t *)(map.data + sent), MAX_DATAFRAME_LEN, RTP_NO_FLAGS);
@@ -63,9 +54,7 @@ GstFlowReturn new_sample(GstAppSink *appsink, CustomData *customData)
 
 int main(int argc, char *argv[])
 {
-    CustomData socketData;
     GstElement *pipeline;
-    GstElement *appsrc;
     GstBus *bus;
     GstMessage *msg;
     // SOCKET
@@ -73,24 +62,21 @@ int main(int argc, char *argv[])
     auto receive_port = 8888;
     auto send_port = 8889;
 
+    // UVGRTP Setup
     uvgrtp::context ctx;
     printf("Initializing the server\n");
     uvgrtp::session *session = ctx.create_session(hostname.c_str());
-    printf("Initializing the server\n");
     // checkout RCC_UDP_SND_BUF_SIZE and RCC_UDP_RCV_BUF_SIZE
     // https://github.com/ultravideo/uvgRTP/issues/76
     uvgrtp::media_stream *rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC);
-    socketData.rtp_stream = rtp_stream;
+    auto socketData = CustomData{rtp_stream = rtp_stream};
 
-    /* Initialize GStreamer */
+    // Gstreamer Setup
     gst_init(&argc, &argv);
-
-    /* Build the pipeline */
 #ifdef _WIN32
-    auto pipeline_args = "dx9screencapsrc width=1920 height=1080 ! video/x-raw,framerate=60/1 ! appsink name=sink";
-    // auto pipeline_args = "dx9screencapsrc x=100 y=100 width=320 height=240 ! videoconvert ! autovideosink";
+    auto pipeline_args = "dxgiscreencapsrc width=1920 height=1080 ! video/x-raw,framerate=60/1 ! appsink name=sink";
 #else
-    auto pipeline_args = "ximagesrc startx=2560 starty=0 endx=4480 endy=1080 use-damage=0 ! video/x-raw,framerate=5/1 ! appsink name=sink";    
+    auto pipeline_args = "ximagesrc startx=2560 starty=0 endx=4480 endy=1080 use-damage=0 ! video/x-raw,framerate=5/1 ! appsink name=sink";
 #endif
     pipeline = gst_parse_launch(pipeline_args, NULL);
 
@@ -98,7 +84,7 @@ int main(int argc, char *argv[])
     gst_app_sink_set_emit_signals((GstAppSink *)sink, true);
     gst_app_sink_set_drop((GstAppSink *)sink, true);
     gst_app_sink_set_max_buffers((GstAppSink *)sink, 1);
-    GstAppSinkCallbacks callbacks = {NULL, NULL, (GstFlowReturn (*)(GstAppSink*, gpointer))new_sample};
+    GstAppSinkCallbacks callbacks = {NULL, NULL, (GstFlowReturn(*)(GstAppSink *, gpointer))frame_recorded_callback};
     gst_app_sink_set_callbacks(GST_APP_SINK(sink), &callbacks, &socketData, NULL);
 
     /* Start playing */
