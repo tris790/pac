@@ -127,7 +127,7 @@ int main()
     }
 
     Mix_Chunk *mmusic;
-    std::string path = "D:/Data_mick/Universite/projet/pac/assets/Beyond.wav"
+    std::string path = "D:/Data_mick/Universite/projet/pac/assets/Beyond.wav";
     mmusic = Mix_LoadWAV(path.c_str());
     if (mmusic == NULL)
     {
