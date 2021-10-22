@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
     auto pipeline_args = "dxgiscreencapsrc width=1920 height=1080 cursor=1 ! video/x-raw,framerate=60/1 ! appsink name=sink";
 #else
-    auto pipeline_args = "ximagesrc startx=2560 starty=0 endx=4480 endy=1080 use-damage=0 ! video/x-raw,framerate=60/1 ! appsink name=sink";
+    auto pipeline_args = "ximagesrc startx=2560 endx=4479 starty=0 endy=1080 use-damage=0 ! video/x-raw,framerate=60/1 ! videoscale method=0 ! video/x-raw,width=1920,height=1080 ! appsink name=sink"; 
 #endif
 #else
     auto pipeline_args = "videotestsrc ! video/x-raw,width=1920,height=1080,format=RGBx,framerate=60/1 ! appsink name=sink";
