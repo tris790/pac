@@ -11,6 +11,8 @@
 #include <assert.h>
 #include "pac_network.h"
 
+#define GSTREAMER_CAPTURE 1
+
 typedef struct _CustomData
 {
     uvgrtp::media_stream *rtp_stream;
@@ -58,46 +60,49 @@ GstFlowReturn frame_recorded_callback(GstAppSink *appsink, CustomData *customDat
 
 int main(int argc, char *argv[])
 {
-    GstElement *pipeline;
-    GstBus *bus;
-    GstMessage *msg;
-    // SOCKET
+    printf("Initializing the server\n");
+
     std::string hostname("127.0.0.1");
     auto receive_port = 8888;
     auto send_port = 8889;
 
     // UVGRTP Setup
     uvgrtp::context ctx;
-    printf("Initializing the server\n");
     uvgrtp::session *session = ctx.create_session(hostname.c_str());
     // checkout RCC_UDP_SND_BUF_SIZE and RCC_UDP_RCV_BUF_SIZE
     // https://github.com/ultravideo/uvgRTP/issues/76
     uvgrtp::media_stream *rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC);
-    auto socketData = CustomData{rtp_stream = rtp_stream};
 
     // Gstreamer Setup
     gst_init(&argc, &argv);
+#if GSTREAMER_CAPTURE
+
 #ifdef _WIN32
-    auto pipeline_args = "dxgiscreencapsrc width=1920 height=1080 ! video/x-raw,framerate=60/1 ! appsink name=sink";
+    auto pipeline_args = "dxgiscreencapsrc width=1920 height=1080 cursor=1 ! video/x-raw,framerate=60/1 ! appsink name=sink";
 #else
-    auto pipeline_args = "ximagesrc startx=2560 starty=0 endx=4480 endy=1080 use-damage=0 ! video/x-raw,framerate=5/1 ! appsink name=sink";
+    auto pipeline_args = "ximagesrc startx=2560 starty=0 endx=4480 endy=1080 use-damage=0 ! video/x-raw,framerate=60/1 ! appsink name=sink";
 #endif
-    pipeline = gst_parse_launch(pipeline_args, NULL);
+#else
+    auto pipeline_args = "videotestsrc ! video/x-raw,width=1920,height=1080,format=RGBx,framerate=60/1 ! appsink name=sink";
+#endif
+    GstElement *pipeline = gst_parse_launch(pipeline_args, NULL);
 
     GstElement *sink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
     gst_app_sink_set_emit_signals((GstAppSink *)sink, true);
     gst_app_sink_set_drop((GstAppSink *)sink, true);
     gst_app_sink_set_max_buffers((GstAppSink *)sink, 1);
     GstAppSinkCallbacks callbacks = {NULL, NULL, (GstFlowReturn(*)(GstAppSink *, gpointer))frame_recorded_callback};
+
+    auto socketData = CustomData{rtp_stream = rtp_stream};
     gst_app_sink_set_callbacks(GST_APP_SINK(sink), &callbacks, &socketData, NULL);
 
     /* Start playing */
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
 
     /* Wait until error or EOS */
-    bus = gst_element_get_bus(pipeline);
-    msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
-                                     (GstMessageType)(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
+    GstBus *bus = gst_element_get_bus(pipeline);
+    GstMessage *msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
+                                                 (GstMessageType)(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
 
     switch (GST_MESSAGE_TYPE(msg))
     {
@@ -127,5 +132,7 @@ int main(int argc, char *argv[])
     gst_object_unref(bus);
     gst_element_set_state(pipeline, GST_STATE_NULL);
     gst_object_unref(pipeline);
+
+    ctx.destroy_session(session);
     return 0;
 }
