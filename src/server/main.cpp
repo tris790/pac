@@ -82,12 +82,12 @@ int main(int argc, char *argv[])
 #if GSTREAMER_CAPTURE
 
 #ifdef _WIN32
-    auto pipeline_args = "dxgiscreencapsrc width=1920 height=1080 cursor=1 ! video/x-raw,framerate=60/1 ! appsink name=sink";
+    auto pipeline_args = conf.conf_dict["gst_win"].c_str();
 #else
-    auto pipeline_args = "ximagesrc startx=2560 endx=4479 starty=0 endy=1080 use-damage=0 ! video/x-raw,framerate=60/1 ! videoscale method=0 ! video/x-raw,width=1920,height=1080 ! appsink name=sink"; 
+    auto pipeline_args = conf.conf_dict["gst_linux"].c_str(); 
 #endif
 #else
-    auto pipeline_args = "videotestsrc ! video/x-raw,width=1920,height=1080,format=RGBx,framerate=60/1 ! appsink name=sink";
+    auto pipeline_args = conf.conf_dict["gst_splashscreen"].c_str();
 #endif
     GstElement *pipeline = gst_parse_launch(pipeline_args, NULL);
 
