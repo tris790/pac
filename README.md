@@ -64,6 +64,9 @@ cmake --build "build64/Release"
 - Windows: `gst-launch-1.0 dxgiscreencapsrc cursor=true ! video/x-raw,framerate=60/1 ! videoscale method=0 ! videoconvert ! autovideosink sync=false`
 - Linux: `gst-launch-1.0 ximagesrc startx=0 starty=0 use-damage=0 xid=83886082 ! video/x-raw,framerate=60/1 ! videoscale method=0 ! video/x-raw,width=1920,height=1080  ! autovideosink sync=false`
 
+- h264 recorder: `gst-launch-1.0.exe dxgiscreencapsrc width=1920 height=1080 cursor=1 ! video/x-raw,framerate=60/1 ! videoscale ! videoconvert ! queue ! nvh264enc ! rtph264pay ! queue ! udpsink host=127.0.0.1 port=9996`
+- h264 receiver: `gst-launch-1.0.exe udpsrc port=9996 caps = "application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264, payload=(int)96" ! rtph264depay ! queue ! decodebin ! videoconvert ! autovideosink`
+
 ### FAQ
 Q: Pac-server cannot record / find monitor X   
 A: Your are most likely using a hybrid graphics system (integrated gpu + external gpu). You need to set the Graphics performance preference to "low power (integrated gpu)" for pac-server.exe

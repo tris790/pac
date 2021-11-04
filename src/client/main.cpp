@@ -10,12 +10,18 @@
 #include <assert.h>
 #include "pac_network.h"
 
+#include <gst/gst.h>
+#include <glib.h>
+#include <gst/app/gstappsrc.h>
+#include <gst/app/gstappsink.h>
+
 // was needed because SDL was redeclaring main on something like that
 #undef main
 
-int window_width = 1920, window_heigth = 1000;
+int window_width = 800, window_heigth = 600;
 const int pixel_w = 1920, pixel_h = 1080;
-const int screen_buffer_size = pixel_w * pixel_h * 4;
+
+const int screen_buffer_size = pixel_w * pixel_h * 3;
 unsigned char screen_buffer[screen_buffer_size];
 
 //Refresh Event
@@ -48,35 +54,14 @@ int network_thread_fn(void *opaque)
 
     while (!thread_exit)
     {
-        // The server will tell us when a whole video frame is sent so we can refresh
-        bool building_a_frame = true;
-        while (building_a_frame)
+        uvgrtp::frame::rtp_frame *video_network_frame = rtp_stream->pull_frame(5);
+        if (video_network_frame)
         {
-            uvgrtp::frame::rtp_frame *video_network_frame = rtp_stream->pull_frame(5);
-            if (video_network_frame)
-            {
-                NetworkPacket *video_network_packet = (NetworkPacket *)video_network_frame->payload;
-                if (video_network_packet->packet_type == NETWORK_PACKET_TYPE::VIDEO)
-                {
-                    // We received a video frame, assuming the network frame is full size
-                    int video_bytes_received = sizeof(video_network_packet->data);
-                    if (video_network_packet->buffer_offset + video_bytes_received > screen_buffer_size)
-                    {
-                        // the network frame was too huge for our buffer, only take the remaining
-                        video_bytes_received = screen_buffer_size - video_network_packet->buffer_offset;
-                    }
-
-                    // Copy the network frame content into our screen buffer
-                    memcpy(screen_buffer + video_network_packet->buffer_offset, video_network_packet->data, video_bytes_received);
-                }
-                else if (video_network_packet->packet_type == NETWORK_PACKET_TYPE::FLUSH_SCREEN)
-                {
-                    // We received enough network frame to create a video frame so we refresh the screen
-                    building_a_frame = false;
-                }
-            }
-            uvgrtp::frame::dealloc_frame(video_network_frame);
+            auto packet = video_network_frame->payload;
+            auto packet_size = video_network_frame->payload_len;
+            printf("Client size: %lld\n", packet_size);
         }
+        uvgrtp::frame::dealloc_frame(video_network_frame);
 
         SDL_Event event;
         event.type = REFRESH_EVENT;
@@ -91,7 +76,60 @@ int network_thread_fn(void *opaque)
     return 0;
 }
 
-int main()
+typedef struct
+{
+    int *argc;
+    char ***argv;
+} GStreamerThreadArgs;
+
+int gstreamer_thread_fn(void *opaque)
+{
+    GStreamerThreadArgs *args = (GStreamerThreadArgs *)opaque;
+    gst_init(args->argc, args->argv);
+    auto pipeline_args = "udpsrc port=9996 caps = \"application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264, payload=(int)96\" ! rtph264depay ! queue ! decodebin ! videoconvert ! autovideosink";
+    GstElement *pipeline = gst_parse_launch(pipeline_args, NULL);
+
+    GstElement *sink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
+    gst_app_sink_set_emit_signals((GstAppSink *)sink, true);
+    gst_app_sink_set_drop((GstAppSink *)sink, true);
+    gst_app_sink_set_max_buffers((GstAppSink *)sink, 1);
+    gst_element_set_state(pipeline, GST_STATE_PLAYING);
+
+    GstBus *bus = gst_element_get_bus(pipeline);
+    GstMessage *msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
+                                                 (GstMessageType)(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
+
+    switch (GST_MESSAGE_TYPE(msg))
+    {
+    case GST_MESSAGE_ERROR:
+    {
+        GError *err;
+        gchar *debug;
+
+        gst_message_parse_error(msg, &err, &debug);
+        g_print("Error: %s\n", err->message);
+        g_error_free(err);
+        g_free(debug);
+
+        break;
+    }
+    case GST_MESSAGE_EOS:
+        /* end-of-stream */
+        break;
+    default:
+        /* unhandled message */
+        break;
+    }
+
+    if (msg != NULL)
+        gst_message_unref(msg);
+    gst_object_unref(bus);
+    gst_element_set_state(pipeline, GST_STATE_NULL);
+    gst_object_unref(pipeline);
+    return 0;
+}
+
+int main(int argc, char *argv[])
 {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     {
@@ -137,12 +175,15 @@ int main()
     Uint32 pixformat = 0;
     //IYUV: Y + U + V  (3 planes)
     //YV12: Y + V + U  (3 planes)
-    pixformat = SDL_PIXELFORMAT_RGB888;
+    // pixformat = SDL_PIXELFORMAT_RGB888;
+    pixformat = SDL_PIXELFORMAT_IYUV;
 
     SDL_Texture *sdlTexture = SDL_CreateTexture(sdlRenderer, pixformat, SDL_TEXTUREACCESS_STREAMING, pixel_w, pixel_h);
     SDL_Rect sdlRect;
 
     SDL_Thread *network_thread = SDL_CreateThread(network_thread_fn, NULL, NULL);
+    GStreamerThreadArgs gstreamer_args{&argc, &argv};
+    SDL_Thread *gstreamer_thread = SDL_CreateThread(gstreamer_thread_fn, NULL, &gstreamer_args);
     SDL_Event event;
     bool isPlaying = true;
     //Lance la musique depuis le début du fichier
@@ -154,7 +195,7 @@ int main()
         SDL_WaitEvent(&event);
         if (event.type == REFRESH_EVENT && isPlaying)
         {
-            SDL_UpdateTexture(sdlTexture, NULL, screen_buffer, pixel_w * 4);
+            SDL_UpdateTexture(sdlTexture, NULL, screen_buffer, pixel_w);
 
             //FIX: If window is resize
             sdlRect.x = 0;

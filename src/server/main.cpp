@@ -11,7 +11,7 @@
 #include <assert.h>
 #include "pac_network.h"
 
-#define GSTREAMER_CAPTURE 1
+#define GSTREAMER_CAPTURE 0
 
 typedef struct _CustomData
 {
@@ -25,33 +25,8 @@ GstFlowReturn frame_recorded_callback(GstAppSink *appsink, CustomData *customDat
     GstBuffer *buffer = gst_sample_get_buffer(sample);
     GstMapInfo video_frame_info;
     gst_buffer_map(buffer, &video_frame_info, GST_MAP_READ);
-    printf("size: %lld\n", video_frame_info.size);
-
-    // SOCKET
-    NetworkPacket video_network_packet = {
-        NETWORK_PACKET_TYPE::VIDEO, // packet_type
-        0,                          // buffer_offset
-        NULL                        // data
-    };
-
-    int byte_size_to_send = sizeof(video_network_packet.data);
-    while (byte_size_to_send > 0)
-    {
-        // TODO: we don't "need" this memcpy, when we can fit a whole encoded video frame into a single network frame
-        // we can remove this (right now we need it because we want to send a chunk of the video frame
-        // and some metadata like the packet type and buf_offset)
-        memcpy(video_network_packet.data, video_frame_info.data + video_network_packet.buffer_offset, byte_size_to_send);
-        customData->rtp_stream->push_frame((uint8_t *)&video_network_packet, sizeof(NetworkPacket), RTP_NO_FLAGS);
-        video_network_packet.buffer_offset += byte_size_to_send;
-
-        if (video_network_packet.buffer_offset + byte_size_to_send > video_frame_info.size)
-        {
-            // We don't have a full frame left to send
-            byte_size_to_send = video_frame_info.size - video_network_packet.buffer_offset;
-        }
-    }
-    video_network_packet.packet_type = NETWORK_PACKET_TYPE::FLUSH_SCREEN;
-    customData->rtp_stream->push_frame((uint8_t *)&video_network_packet, sizeof(NetworkPacket), RTP_NO_FLAGS);
+    printf("Server size: %lld\n", video_frame_info.size);
+    // customData->rtp_stream->push_frame((uint8_t *)video_frame_info.data, video_frame_info.size, RTP_NO_FLAGS);
 
     gst_buffer_unmap(buffer, &video_frame_info);
     gst_sample_unref(sample);
@@ -80,10 +55,10 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
     auto pipeline_args = "dxgiscreencapsrc width=1920 height=1080 cursor=1 ! video/x-raw,framerate=60/1 ! appsink name=sink";
 #else
-    auto pipeline_args = "ximagesrc startx=2560 endx=4479 starty=0 endy=1080 use-damage=0 ! video/x-raw,framerate=60/1 ! videoscale method=0 ! video/x-raw,width=1920,height=1080 ! appsink name=sink"; 
+    auto pipeline_args = "ximagesrc startx=2560 endx=4479 starty=0 endy=1080 use-damage=0 ! video/x-raw,framerate=60/1 ! videoscale method=0 ! video/x-raw,width=1920,height=1080 ! appsink name=sink";
 #endif
 #else
-    auto pipeline_args = "videotestsrc ! video/x-raw,width=1920,height=1080,format=RGBx,framerate=60/1 ! appsink name=sink";
+    auto pipeline_args = "dxgiscreencapsrc width=1920 height=1080 cursor=1 ! video/x-raw,framerate=60/1 ! videoscale ! videoconvert ! queue ! nvh264enc ! rtph264pay ! queue ! udpsink host=127.0.0.1 port=9996";
 #endif
     GstElement *pipeline = gst_parse_launch(pipeline_args, NULL);
 
@@ -91,10 +66,10 @@ int main(int argc, char *argv[])
     gst_app_sink_set_emit_signals((GstAppSink *)sink, true);
     gst_app_sink_set_drop((GstAppSink *)sink, true);
     gst_app_sink_set_max_buffers((GstAppSink *)sink, 1);
-    GstAppSinkCallbacks callbacks = {NULL, NULL, (GstFlowReturn(*)(GstAppSink *, gpointer))frame_recorded_callback};
+    // GstAppSinkCallbacks callbacks = {NULL, NULL, (GstFlowReturn(*)(GstAppSink *, gpointer))frame_recorded_callback};
 
     auto socketData = CustomData{rtp_stream = rtp_stream};
-    gst_app_sink_set_callbacks(GST_APP_SINK(sink), &callbacks, &socketData, NULL);
+    // gst_app_sink_set_callbacks(GST_APP_SINK(sink), &callbacks, &socketData, NULL);
 
     /* Start playing */
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
