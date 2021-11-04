@@ -4,11 +4,12 @@
 #include <vector>
 #include "config.h"
 
-const int bpp = 12;
-int screen_w = 1920, screen_h = 1000;
-const int pixel_w = 1920, pixel_h = 1080;
+Config conf = Config("D:/Data_mick/Universite/projet/pac/src/server/.env");
+const int bpp = stoi(conf.conf_dict["bpp"]);
+int screen_w = stoi(conf.conf_dict["screen_w"]), screen_h = stoi(conf.conf_dict["screen_h"]);
+const int pixel_w = stoi(conf.conf_dict["pixel_w"]), pixel_h = stoi(conf.conf_dict["pixel_h"]);
 size_t TOTAL_FRAME_LEN = pixel_w * pixel_h * bpp / 8;
-size_t MAX_DATAFRAME_LEN = 1024; // 5120;
+size_t MAX_DATAFRAME_LEN = stoi(conf.conf_dict["MAX_DATAFRAME_LEN"]); // 5120;
 
 enum NETWORK_PACKET
 {
@@ -19,16 +20,15 @@ enum NETWORK_PACKET
 int main()
 {
   
-  Config conf = Config("D:/Data_mick/Universite/projet/pac/src/server/.env");
   std::map<std::string, std::string>::iterator it = conf.conf_dict.begin();
   // imprime les valeurs de la config en console. probablement a retirer
   for(std::pair<std::string, std::string> element : conf.conf_dict)
   {
    printf( element.first.append(":").append(element.second.append("\n")).c_str());
   } 
-  std::string hostname("127.0.0.1");
-  auto receive_port = 8888;
-  auto send_port = 8889;
+  std::string hostname(conf.conf_dict["hostname"]);
+  auto receive_port = stoi(conf.conf_dict["receive_port"]);
+  auto send_port = stoi(conf.conf_dict["send_port"]);
   auto buffer = new unsigned char[TOTAL_FRAME_LEN];
 
   uvgrtp::context ctx;
@@ -40,7 +40,7 @@ int main()
   uvgrtp::media_stream *rtp_stream = session->create_stream(
       receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC);
 
-  std::string path = "D:/Data_mick/Universite/projet/pac/assets/output.yuv";
+  std::string path = conf.conf_dict["static_video_path"];
   FILE *fp = NULL;
   fopen_s(&fp,path.c_str(), "rb+");
 
