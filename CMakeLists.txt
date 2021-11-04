@@ -16,6 +16,7 @@ if(${CMAKE_VERSION} VERSION_LESS 3.14)
   include(cmake/add_FetchContent_MakeAvailable.cmake)
 endif()
 
+include_directories("include")
 add_subdirectory(dependencies)
 add_subdirectory(src)
 

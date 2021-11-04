@@ -7,14 +7,16 @@
 #include <thread>
 #include <chrono>
 #include <inttypes.h>
-#include <string.h>
+#include <assert.h>
+#include "pac_network.h"
 
+// was needed because SDL was redeclaring main on something like that
 #undef main
-const int bpp = 12;
 
-int screen_w = 1920, screen_h = 1000;
+int window_width = 1920, window_heigth = 1000;
 const int pixel_w = 1920, pixel_h = 1080;
-unsigned char buffer[pixel_w * pixel_h * bpp / 8];
+const int screen_buffer_size = pixel_w * pixel_h * 4;
+unsigned char screen_buffer[screen_buffer_size];
 
 //Refresh Event
 #define REFRESH_EVENT (SDL_USEREVENT + 1)
@@ -46,32 +48,34 @@ int network_thread_fn(void *opaque)
 
     while (!thread_exit)
     {
-        uvgrtp::frame::rtp_frame *start_frame = rtp_stream->pull_frame(5);
-        if (start_frame && start_frame->payload_len == 1 && *start_frame->payload == 0)
+        // The server will tell us when a whole video frame is sent so we can refresh
+        bool building_a_frame = true;
+        while (building_a_frame)
         {
-            printf("Received payload %" PRIu8 "\n", *start_frame->payload);
-            uvgrtp::frame::dealloc_frame(start_frame);
-
-            size_t offset = 0;
-            bool receivingFrame = true;
-            while (receivingFrame)
+            uvgrtp::frame::rtp_frame *video_network_frame = rtp_stream->pull_frame(5);
+            if (video_network_frame)
             {
-                uvgrtp::frame::rtp_frame *data_frame = rtp_stream->pull_frame();
-                if (data_frame && data_frame->payload_len == 1)
+                NetworkPacket *video_network_packet = (NetworkPacket *)video_network_frame->payload;
+                if (video_network_packet->packet_type == NETWORK_PACKET_TYPE::VIDEO)
                 {
-                    receivingFrame = false;
+                    // We received a video frame, assuming the network frame is full size
+                    int video_bytes_received = sizeof(video_network_packet->data);
+                    if (video_network_packet->buffer_offset + video_bytes_received > screen_buffer_size)
+                    {
+                        // the network frame was too huge for our buffer, only take the remaining
+                        video_bytes_received = screen_buffer_size - video_network_packet->buffer_offset;
+                    }
+
+                    // Copy the network frame content into our screen buffer
+                    memcpy(screen_buffer + video_network_packet->buffer_offset, video_network_packet->data, video_bytes_received);
                 }
-                else
+                else if (video_network_packet->packet_type == NETWORK_PACKET_TYPE::FLUSH_SCREEN)
                 {
-                    memcpy(buffer + offset, data_frame->payload, data_frame->payload_len);
-                    offset += data_frame->payload_len;
+                    // We received enough network frame to create a video frame so we refresh the screen
+                    building_a_frame = false;
                 }
-                uvgrtp::frame::dealloc_frame(data_frame);
             }
-        }
-        else
-        {
-            uvgrtp::frame::dealloc_frame(start_frame);
+            uvgrtp::frame::dealloc_frame(video_network_frame);
         }
 
         SDL_Event event;
@@ -89,7 +93,7 @@ int network_thread_fn(void *opaque)
 
 int main()
 {
-    if (SDL_Init(SDL_INIT_VIDEO| SDL_INIT_AUDIO))
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     {
         printf("Could not initialize SDL - %s\n", SDL_GetError());
         return -1;
@@ -99,7 +103,7 @@ int main()
     //SDL 2.0 Support for multiple windows
     const char *window_name = "StadiaLike - Client";
     screen = SDL_CreateWindow(window_name, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                              screen_w, screen_h, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+                              window_width, window_heigth, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if (!screen)
     {
         printf("SDL: could not create window - exiting:%s\n", SDL_GetError());
@@ -121,8 +125,8 @@ int main()
         fprintf(stderr, "Unable to allocate mixing channels: %s\n", SDL_GetError());
         exit(-1);
     }
-    
-    Mix_Chunk* mmusic;
+
+    Mix_Chunk *mmusic;
     std::string path = "D:/Data_mick/Universite/projet/pac/assets/Beyond.wav";
     mmusic = Mix_LoadWAV(path.c_str());
     if (mmusic == NULL)
@@ -133,7 +137,7 @@ int main()
     Uint32 pixformat = 0;
     //IYUV: Y + U + V  (3 planes)
     //YV12: Y + V + U  (3 planes)
-    pixformat = SDL_PIXELFORMAT_IYUV;
+    pixformat = SDL_PIXELFORMAT_RGB888;
 
     SDL_Texture *sdlTexture = SDL_CreateTexture(sdlRenderer, pixformat, SDL_TEXTUREACCESS_STREAMING, pixel_w, pixel_h);
     SDL_Rect sdlRect;
@@ -143,20 +147,20 @@ int main()
     bool isPlaying = true;
     //Lance la musique depuis le début du fichier
     Mix_PlayChannel(1, mmusic, -1);
-    
+
     while (true)
     {
         //Wait
         SDL_WaitEvent(&event);
         if (event.type == REFRESH_EVENT && isPlaying)
         {
-            SDL_UpdateTexture(sdlTexture, NULL, buffer, pixel_w);
+            SDL_UpdateTexture(sdlTexture, NULL, screen_buffer, pixel_w * 4);
 
             //FIX: If window is resize
             sdlRect.x = 0;
             sdlRect.y = 0;
-            sdlRect.w = screen_w;
-            sdlRect.h = screen_h;
+            sdlRect.w = window_width;
+            sdlRect.h = window_heigth;
 
             SDL_RenderClear(sdlRenderer);
             SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, &sdlRect);
@@ -171,22 +175,12 @@ int main()
             else if (event.key.keysym.sym == SDLK_SPACE)
             {
                 isPlaying = !isPlaying;
-                if (isPlaying)
-                {
-                    //Relance la musique d'ou elle était rendu
-                    Mix_Resume(1);
-                }
-                else
-                {
-                    //Met la musique en pause
-                    Mix_Pause(1);
-                }
             }
         }
         else if (event.type == SDL_WINDOWEVENT)
         {
             //If Resize
-            SDL_GetWindowSize(screen, &screen_w, &screen_h);
+            SDL_GetWindowSize(screen, &window_width, &window_heigth);
         }
         else if (event.type == SDL_QUIT)
         {
@@ -197,9 +191,6 @@ int main()
             break;
         }
     }
-
-    Mix_FreeChunk(mmusic);
-    Mix_CloseAudio();
     SDL_Quit();
     return 0;
 }
