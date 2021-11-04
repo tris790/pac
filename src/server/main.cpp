@@ -13,7 +13,7 @@
 #include "pac_network.h"
 #include "config.h"
 
-Config conf = Config("D:/Data_mick/Universite/projet/pac/src/server/.env");
+Config conf = Config("server.conf");
 
 #define GSTREAMER_CAPTURE 1
 

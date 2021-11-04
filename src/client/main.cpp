@@ -9,14 +9,18 @@
 #include <inttypes.h>
 #include <assert.h>
 #include "pac_network.h"
+#include "config.h"
+
+Config conf = Config("client.conf");
 
 // was needed because SDL was redeclaring main on something like that
 #undef main
 
-int window_width = 1920, window_heigth = 1000;
-const int pixel_w = 1920, pixel_h = 1080;
-const int screen_buffer_size = pixel_w * pixel_h * 4;
-unsigned char screen_buffer[screen_buffer_size];
+int window_width = stoi(conf.conf_dict["window_width"]), window_heigth = stoi(conf.conf_dict["window_heigth"]);
+const int pixel_w = stoi(conf.conf_dict["pixel_w"]), pixel_h = stoi(conf.conf_dict["pixel_h"]);
+const size_t screen_buffer_size = pixel_w * pixel_h * 4;
+unsigned char *screen_buffer = (unsigned char*) malloc(screen_buffer_size);
+//assert(screen_buffer!=NULL);
 
 //Refresh Event
 #define REFRESH_EVENT (SDL_USEREVENT + 1)
@@ -30,9 +34,9 @@ int network_thread_fn(void *opaque)
 {
     thread_exit = 0;
     uvgrtp::context ctx;
-    std::string server_hostname("127.0.0.1");
-    auto receive_port = 8889;
-    auto send_port = 8888;
+    std::string server_hostname(conf.conf_dict["hostname"]);
+    auto receive_port = stoi(conf.conf_dict["receive_port"]);
+    auto send_port = stoi(conf.conf_dict["send_port"]);
     uvgrtp::session *session = ctx.create_session(server_hostname);
     printf("Connecting to %s:%d\n", server_hostname.c_str(), receive_port);
     uvgrtp::media_stream *rtp_stream = nullptr;
@@ -127,7 +131,7 @@ int main()
     }
 
     Mix_Chunk *mmusic;
-    std::string path = "D:/Data_mick/Universite/projet/pac/assets/Beyond.wav";
+    std::string path = conf.conf_dict["audio_file_path"];
     mmusic = Mix_LoadWAV(path.c_str());
     if (mmusic == NULL)
     {
@@ -146,7 +150,7 @@ int main()
     SDL_Event event;
     bool isPlaying = true;
     //Lance la musique depuis le début du fichier
-    Mix_PlayChannel(1, mmusic, -1);
+    Mix_PlayChannel(stoi(conf.conf_dict["channel"]), mmusic, stoi(conf.conf_dict["loop"]));
 
     while (true)
     {
@@ -192,5 +196,6 @@ int main()
         }
     }
     SDL_Quit();
+    free(screen_buffer);
     return 0;
 }

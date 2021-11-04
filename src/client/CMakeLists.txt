@@ -1,5 +1,5 @@
 set(APP_NAME pac-client)
-add_executable(${APP_NAME} main.cpp)
+add_executable(${APP_NAME} main.cpp config.cpp)
 
 # Hide terminal in debug for Windows
 if(WIN32)
@@ -30,3 +30,10 @@ if(WIN32)
             $<TARGET_FILE:SDL2>
             $<TARGET_FILE_DIR:${APP_NAME}>)
 endif()
+
+# Copying config
+message(STATUS "Copying config...")
+add_custom_command(TARGET ${APP_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_LIST_DIR}/client.conf
+        $<TARGET_FILE_DIR:${APP_NAME}>)
