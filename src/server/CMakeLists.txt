@@ -10,3 +10,19 @@ endif()
 # UVG
 SET(UVGRTP_PATH ${CMAKE_SOURCE_DIR}/libs/uvgRTP)
 target_link_libraries(${APP_NAME} PUBLIC uvgrtp)
+
+# GSTREAMER
+if(WIN32)
+    target_link_directories(${APP_NAME} PUBLIC $ENV{GSTREAMER_1_0_ROOT_MSVC_X86_64}/lib)
+    target_include_directories(${APP_NAME} PUBLIC $ENV{GSTREAMER_1_0_ROOT_MSVC_X86_64}/include/gstreamer-1.0)
+    target_include_directories(${APP_NAME} PUBLIC $ENV{GSTREAMER_1_0_ROOT_MSVC_X86_64}/include/glib-2.0)
+    target_include_directories(${APP_NAME} PUBLIC $ENV{GSTREAMER_1_0_ROOT_MSVC_X86_64}/lib/glib-2.0/include)
+    target_include_directories(${APP_NAME} PUBLIC $ENV{GSTREAMER_1_0_ROOT_MSVC_X86_64}/lib/gstreamer-1.0/include)
+else()
+    target_include_directories(${APP_NAME} PUBLIC /usr/include/gstreamer-1.0)	
+    target_include_directories(${APP_NAME} PUBLIC /usr/include/glib-2.0)	
+    target_include_directories(${APP_NAME} PUBLIC /usr/lib/glib-2.0/include)
+    target_include_directories(${APP_NAME} PUBLIC /usr/lib/gstreamer-1.0/include)
+endif()
+
+target_link_libraries(${APP_NAME} PUBLIC gstreamer-1.0 glib-2.0 gstapp-1.0 gobject-2.0)
