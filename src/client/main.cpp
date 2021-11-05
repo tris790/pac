@@ -86,7 +86,7 @@ int gstreamer_thread_fn(void *opaque)
 {
     GStreamerThreadArgs *args = (GStreamerThreadArgs *)opaque;
     gst_init(args->argc, args->argv);
-    auto pipeline_args = "udpsrc port=9996 caps = \"application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264, payload=(int)96\" ! rtph264depay ! queue ! decodebin ! videoconvert ! autovideosink";
+    auto pipeline_args = "udpsrc port=9996 caps=\"application/x-rtp, media=video, clock-rate=90000, encoding-name=H264, payload=96\" ! rtph264depay ! queue ! decodebin ! videoconvert ! autovideosink";
     GstElement *pipeline = gst_parse_launch(pipeline_args, NULL);
 
     GstElement *sink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
 
     SDL_Window *screen;
     //SDL 2.0 Support for multiple windows
-    const char *window_name = "StadiaLike - Client";
+    const char *window_name = "Pac - Client";
     screen = SDL_CreateWindow(window_name, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                               window_width, window_heigth, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if (!screen)

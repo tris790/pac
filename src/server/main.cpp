@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
     auto pipeline_args = "ximagesrc startx=2560 endx=4479 starty=0 endy=1080 use-damage=0 ! video/x-raw,framerate=60/1 ! videoscale method=0 ! video/x-raw,width=1920,height=1080 ! appsink name=sink";
 #endif
 #else
-    auto pipeline_args = "dxgiscreencapsrc width=1920 height=1080 cursor=1 ! video/x-raw,framerate=60/1 ! videoscale ! videoconvert ! queue ! nvh264enc ! rtph264pay ! queue ! udpsink host=127.0.0.1 port=9996";
+    auto pipeline_args = "dxgiscreencapsrc width=1920 height=1080 cursor=1 ! video/x-raw,framerate=60/1 ! videoconvert ! nvh264enc preset=low-latency-hp max-bitrate=2000 ! queue ! rtph264pay ! udpsink host=127.0.0.1 port=9996";
 #endif
     GstElement *pipeline = gst_parse_launch(pipeline_args, NULL);
 
