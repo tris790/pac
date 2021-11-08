@@ -1,6 +1,6 @@
-﻿#include <stdio.h>
-#define _CRT_SECURE_NO_WARNINGS
+﻿#define _CRT_SECURE_NO_WARNINGS
 #pragma warning(disable : 4996)
+#include <stdio.h>
 #include "SDL.h"
 #include "SDL_mixer.h"
 #include <lib.hh>
