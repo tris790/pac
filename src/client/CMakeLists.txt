@@ -1,5 +1,5 @@
 set(APP_NAME pac-client)
-add_executable(${APP_NAME} main.cpp config.cpp)
+add_executable(${APP_NAME} main.cpp)
 
 # Hide terminal in debug for Windows
 if(WIN32)

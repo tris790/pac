@@ -1,26 +1,26 @@
 ﻿#include <stdio.h>
 #define _CRT_SECURE_NO_WARNINGS
 #pragma warning(disable : 4996)
-#include "SDL.h"
-#include "SDL_mixer.h"
+#include <SDL.h>
+#include <SDL_mixer.h>
 #include <lib.hh>
 #include <thread>
 #include <chrono>
 #include <inttypes.h>
 #include <assert.h>
+
 #include "pac_network.h"
 #include "config.h"
 
-Config conf = Config("client.conf");
+Config configuration = Config("client.conf");
 
 // was needed because SDL was redeclaring main on something like that
 #undef main
 
-int window_width = stoi(conf.conf_dict["window_width"]), window_heigth = stoi(conf.conf_dict["window_heigth"]);
-const int pixel_w = stoi(conf.conf_dict["pixel_w"]), pixel_h = stoi(conf.conf_dict["pixel_h"]);
+int window_width = stoi(configuration["window_width"]), window_heigth = stoi(configuration["window_heigth"]);
+const int pixel_w = stoi(configuration["pixel_w"]), pixel_h = stoi(configuration["pixel_h"]);
 const size_t screen_buffer_size = pixel_w * pixel_h * 4;
-unsigned char *screen_buffer = (unsigned char*) malloc(screen_buffer_size);
-//assert(screen_buffer!=NULL);
+unsigned char *screen_buffer = (unsigned char *)malloc(screen_buffer_size);
 
 //Refresh Event
 #define REFRESH_EVENT (SDL_USEREVENT + 1)
@@ -34,9 +34,9 @@ int network_thread_fn(void *opaque)
 {
     thread_exit = 0;
     uvgrtp::context ctx;
-    std::string server_hostname(conf.conf_dict["hostname"]);
-    auto receive_port = stoi(conf.conf_dict["receive_port"]);
-    auto send_port = stoi(conf.conf_dict["send_port"]);
+    std::string server_hostname(configuration["hostname"]);
+    auto receive_port = stoi(configuration["receive_port"]);
+    auto send_port = stoi(configuration["send_port"]);
     uvgrtp::session *session = ctx.create_session(server_hostname);
     printf("Connecting to %s:%d\n", server_hostname.c_str(), receive_port);
     uvgrtp::media_stream *rtp_stream = nullptr;
@@ -54,7 +54,7 @@ int network_thread_fn(void *opaque)
     {
         // The server will tell us when a whole video frame is sent so we can refresh
         bool building_a_frame = true;
-        while (building_a_frame)
+        while (building_a_frame && !thread_exit)
         {
             uvgrtp::frame::rtp_frame *video_network_frame = rtp_stream->pull_frame(5);
             if (video_network_frame)
@@ -131,7 +131,7 @@ int main()
     }
 
     Mix_Chunk *mmusic;
-    std::string path = conf.conf_dict["audio_file_path"];
+    std::string path = configuration["audio_file_path"];
     mmusic = Mix_LoadWAV(path.c_str());
     if (mmusic == NULL)
     {
@@ -150,7 +150,7 @@ int main()
     SDL_Event event;
     bool isPlaying = true;
     //Lance la musique depuis le début du fichier
-    Mix_PlayChannel(stoi(conf.conf_dict["channel"]), mmusic, stoi(conf.conf_dict["loop"]));
+    Mix_PlayChannel(stoi(configuration["channel"]), mmusic, stoi(configuration["loop"]));
 
     while (true)
     {

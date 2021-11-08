@@ -3,17 +3,17 @@
 #include <gst/app/gstappsrc.h>
 #include <gst/app/gstappsink.h>
 #include <stdio.h>
-
 #include <iostream>
 #include <lib.hh>
 #include <string.h>
 #include <vector>
 #include <string.h>
 #include <assert.h>
+
 #include "pac_network.h"
 #include "config.h"
 
-Config conf = Config("server.conf");
+Config configuration = Config("server.conf");
 
 #define GSTREAMER_CAPTURE 1
 
@@ -66,9 +66,9 @@ int main(int argc, char *argv[])
 {
     printf("Initializing the server\n");
 
-  std::string hostname(conf.conf_dict["hostname"]);
-  auto receive_port = stoi(conf.conf_dict["receive_port"]);
-  auto send_port = stoi(conf.conf_dict["send_port"]);
+    std::string hostname(configuration["hostname"]);
+    auto receive_port = stoi(configuration["receive_port"]);
+    auto send_port = stoi(configuration["send_port"]);
 
     // UVGRTP Setup
     uvgrtp::context ctx;
@@ -80,14 +80,13 @@ int main(int argc, char *argv[])
     // Gstreamer Setup
     gst_init(&argc, &argv);
 #if GSTREAMER_CAPTURE
-
 #ifdef _WIN32
-    auto pipeline_args = conf.conf_dict["gst_win"].c_str();
+    auto pipeline_args = configuration["gstreamer_windows"].c_str();
 #else
-    auto pipeline_args = conf.conf_dict["gst_linux"].c_str(); 
+    auto pipeline_args = configuration["gstreamer_linux"].c_str();
 #endif
 #else
-    auto pipeline_args = conf.conf_dict["gst_splashscreen"].c_str();
+    auto pipeline_args = configuration["gstreamer_splashscreen"].c_str();
 #endif
     GstElement *pipeline = gst_parse_launch(pipeline_args, NULL);
 

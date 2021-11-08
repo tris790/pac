@@ -1,5 +1,5 @@
 set(APP_NAME pac-server)
-add_executable(${APP_NAME} main.cpp config.cpp)
+add_executable(${APP_NAME} main.cpp)
 target_compile_features(${APP_NAME} PRIVATE cxx_std_17)
 
 #WINSOCK2
