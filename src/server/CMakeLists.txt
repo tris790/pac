@@ -26,3 +26,10 @@ else()
 endif()
 
 target_link_libraries(${APP_NAME} PUBLIC gstreamer-1.0 glib-2.0 gstapp-1.0 gobject-2.0)
+
+# Copying config
+message(STATUS "Copying config...")
+add_custom_command(TARGET ${APP_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_LIST_DIR}/server.conf
+        $<TARGET_FILE_DIR:${APP_NAME}>)
