@@ -3,23 +3,29 @@
 #include <gst/app/gstappsrc.h>
 #include <gst/app/gstappsink.h>
 #include <stdio.h>
-
 #include <iostream>
 #include <lib.hh>
+#include <string.h>
 #include <vector>
 #include <string.h>
 #include <assert.h>
+
 #include "pac_network.h"
+#include "config.h"
 
 #define GSTREAMER_CAPTURE 0
+
+Config configuration = Config("server.conf");
+
+#define GSTREAMER_CAPTURE 1
 
 int main(int argc, char *argv[])
 {
     printf("Initializing the server\n");
 
-    std::string hostname("127.0.0.1");
-    auto receive_port = 8888;
-    auto send_port = 8889;
+    std::string hostname(configuration["hostname"]);
+    auto receive_port = stoi(configuration["receive_port"]);
+    auto send_port = stoi(configuration["send_port"]);
 
     // UVGRTP Setup
     uvgrtp::context ctx;
@@ -33,12 +39,12 @@ int main(int argc, char *argv[])
 #if GSTREAMER_CAPTURE
 
 #ifdef _WIN32
-    auto pipeline_args = "dxgiscreencapsrc width=1920 height=1080 cursor=1 ! video/x-raw,framerate=60/1 ! appsink name=sink";
+    auto pipeline_args = configuration["gstreamer_windows"].c_str();
 #else
-    auto pipeline_args = "ximagesrc startx=2560 endx=4479 starty=0 endy=1080 use-damage=0 ! video/x-raw,framerate=60/1 ! videoscale method=0 ! video/x-raw,width=1920,height=1080 ! appsink name=sink";
+    auto pipeline_args = configuration["gstreamer_linux"].c_str();
 #endif
 #else
-    auto pipeline_args = "dxgiscreencapsrc width=1920 height=1080 cursor=1 ! video/x-raw,framerate=60/1 ! nvh264enc preset=low-latency-hp zerolatency=true max-bitrate=2000 ! queue ! rtph264pay ! udpsink host=127.0.0.1 port=9996";
+    auto pipeline_args = configuration["gstreamer_splashscreen"].c_str();
 #endif
     GstElement *pipeline = gst_parse_launch(pipeline_args, NULL);
 

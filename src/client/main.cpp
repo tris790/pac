@@ -1,29 +1,33 @@
 ﻿#define _CRT_SECURE_NO_WARNINGS
 #pragma warning(disable : 4996)
 #include <stdio.h>
-#include "SDL.h"
-#include "SDL_mixer.h"
 #include <lib.hh>
 #include <thread>
 #include <chrono>
 #include <inttypes.h>
 #include <assert.h>
 #include <atomic>
-#include "pac_network.h"
 
+#include <SDL.h>
+#include <SDL_mixer.h>
 #include <gst/gst.h>
 #include <glib.h>
 #include <gst/app/gstappsrc.h>
 #include <gst/app/gstappsink.h>
 #include <gst/video/video-info.h>
 
+#include "pac_network.h"
+#include "config.h"
+
+Config configuration = Config("client.conf");
+
 // was needed because SDL was redeclaring main on something like that
 #undef main
 
 // IYUV, RGB888, RGBx, NV12
 const int pixel_format = SDL_PIXELFORMAT_IYUV;
-int window_width = 800;
-int window_heigth = 600;
+int window_width = stoi(configuration["window_width"]);
+int window_heigth = stoi(configuration["window_heigth"]);
 SDL_Renderer *sdlRenderer;
 int screen_buffer_w = 0;
 int screen_buffer_h = 0;
@@ -45,9 +49,9 @@ int thread_exit = 0;
 int network_thread_fn(void *opaque)
 {
     uvgrtp::context ctx;
-    std::string server_hostname("127.0.0.1");
-    auto receive_port = 8889;
-    auto send_port = 8888;
+    std::string server_hostname(configuration["hostname"]);
+    auto receive_port = stoi(configuration["receive_port"]);
+    auto send_port = stoi(configuration["send_port"]);
     uvgrtp::session *session = ctx.create_session(server_hostname);
     printf("Connecting to %s:%d\n", server_hostname.c_str(), receive_port);
     uvgrtp::media_stream *rtp_stream = nullptr;
@@ -221,7 +225,7 @@ int main(int argc, char *argv[])
     }
 
     Mix_Chunk *mmusic;
-    std::string path = "D:/Data_mick/Universite/projet/pac/assets/Beyond.wav";
+    std::string path = configuration["audio_file_path"];
     mmusic = Mix_LoadWAV(path.c_str());
     if (mmusic == NULL)
     {
@@ -237,7 +241,7 @@ int main(int argc, char *argv[])
     SDL_Event event;
     bool isPlaying = true;
     //Lance la musique depuis le début du fichier
-    Mix_PlayChannel(1, mmusic, -1);
+    Mix_PlayChannel(stoi(configuration["channel"]), mmusic, stoi(configuration["loop"]));
 
     while (true)
     {
