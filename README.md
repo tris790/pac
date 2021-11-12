@@ -8,6 +8,7 @@
 
 ## Dependencies
 - Downloaded, built, linked by CMake, view dependencies/CMakeLists.txt
+- Gstreamer dev + runtime (gstreamer-good, gstreamer-bad)
 
 ## Building
 ### Client and Server
