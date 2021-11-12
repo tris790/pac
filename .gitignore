@@ -6,3 +6,5 @@ libs/**
 .vscode/
 assets/*.yuv
 assets/*.wav
+zig-cache/
+zig-out/

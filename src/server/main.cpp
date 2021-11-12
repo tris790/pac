@@ -4,7 +4,6 @@
 #include <gst/app/gstappsink.h>
 #include <stdio.h>
 #include <iostream>
-#include <lib.hh>
 #include <string.h>
 #include <vector>
 #include <string.h>
@@ -22,21 +21,12 @@ int main(int argc, char *argv[])
     printf("Initializing the server\n");
 
     std::string hostname(configuration["hostname"]);
-    auto receive_port = stoi(configuration["receive_port"]);
-    auto send_port = stoi(configuration["send_port"]);
-
-    // UVGRTP Setup
-    uvgrtp::context ctx;
-    uvgrtp::session *session = ctx.create_session(hostname.c_str());
-    // checkout RCC_UDP_SND_BUF_SIZE and RCC_UDP_RCV_BUF_SIZE
-    // https://github.com/ultravideo/uvgRTP/issues/76
-    uvgrtp::media_stream *rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC);
 
     // Gstreamer Setup
     gst_init(&argc, &argv);
 #if GSTREAMER_CAPTURE
 
-#ifdef _WIN32
+    #ifdef _WIN32
     auto pipeline_args = configuration["gstreamer_windows"].c_str();
 #else
     auto pipeline_args = configuration["gstreamer_linux"].c_str();
@@ -85,6 +75,5 @@ int main(int argc, char *argv[])
     gst_element_set_state(pipeline, GST_STATE_NULL);
     gst_object_unref(pipeline);
 
-    ctx.destroy_session(session);
     return 0;
 }
