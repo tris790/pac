@@ -13,8 +13,6 @@
 #include "pac_network.h"
 #include "config.h"
 
-#define GSTREAMER_CAPTURE 0
-
 Config configuration = Config("server.conf");
 
 #define GSTREAMER_CAPTURE 1
