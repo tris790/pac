@@ -8,6 +8,7 @@
 
 ## Dependencies
 - Downloaded, built, linked by CMake, view dependencies/CMakeLists.txt
+- Gstreamer dev + runtime (gstreamer-good, gstreamer-bad)
 
 ## Building
 ### Client and Server
@@ -63,6 +64,9 @@ cmake --build "build64/Release"
 
 - Windows: `gst-launch-1.0 dxgiscreencapsrc cursor=true ! video/x-raw,framerate=60/1 ! videoscale method=0 ! videoconvert ! autovideosink sync=false`
 - Linux: `gst-launch-1.0 ximagesrc startx=0 starty=0 use-damage=0 xid=83886082 ! video/x-raw,framerate=60/1 ! videoscale method=0 ! video/x-raw,width=1920,height=1080  ! autovideosink sync=false`
+
+- h264 recorder: `gst-launch-1.0.exe dx9screencapsrc ! video/x-raw,framerate=60/1 ! videoconvert ! nvh264enc preset=low-latency-hp max-bitrate=2000 ! queue ! rtph264pay ! udpsink host=127.0.0.1 port=9996`
+- h264 receiver: `gst-launch-1.0.exe udpsrc port=9996 caps="application/x-rtp, media=video, clock-rate=90000, encoding-name=H264, payload=96" ! rtph264depay ! queue ! decodebin ! videoconvert ! autovideosink`
 
 ### FAQ
 Q: Pac-server cannot record / find monitor X   
