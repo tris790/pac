@@ -17,16 +17,23 @@
 
 #include "pac_network.h"
 #include "config.h"
+std::string get_exec_directory(char *current_path)
+{
+    std::string current_path_string(current_path);
+#ifdef _WIN32
+    auto last_slash_index = current_path_string.find_last_of("\\");
+#else
+    auto last_slash_index = current_path_string.find_last_of("/");
+#endif
+    return current_path_string.substr(0, last_slash_index > 1 ? last_slash_index : 0);
+} 
 
-Config configuration = Config("client.conf");
 
 // was needed because SDL was redeclaring main on something like that
 #undef main
 
 // IYUV, RGB888, RGBx, NV12
 const int pixel_format = SDL_PIXELFORMAT_IYUV;
-int window_width = stoi(configuration["window_width"]);
-int window_heigth = stoi(configuration["window_heigth"]);
 SDL_Renderer *sdlRenderer;
 int screen_buffer_w = 0;
 int screen_buffer_h = 0;
@@ -147,6 +154,12 @@ int gstreamer_thread_fn(void *opaque)
 
 int main(int argc, char *argv[])
 {
+    std::string executable_directory = get_exec_directory(argv[0]);
+    Config configuration = Config(executable_directory + "/" + "client.conf");
+    
+    int window_width = stoi(configuration["window_width"]);
+    int window_heigth = stoi(configuration["window_heigth"]);
+    
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     {
         printf("Could not initialize SDL - %s\n", SDL_GetError());
