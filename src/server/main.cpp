@@ -11,13 +11,25 @@
 
 #include "pac_network.h"
 #include "config.h"
+std::string get_exec_directory(char *current_path)
+{
+    std::string current_path_string(current_path);
+#ifdef _WIN32
+    auto last_slash_index = current_path_string.find_last_of("\\");
+#else 
+    auto last_slash_index = current_path_string.find_last_of("/");
+#endif
+    return current_path_string.substr(0, last_slash_index > 1 ? last_slash_index : 0);
+}
 
-Config configuration = Config("server.conf");
 
 #define GSTREAMER_CAPTURE 1
 
 int main(int argc, char *argv[])
 {
+    std::string executable_directory = get_exec_directory(argv[0]);
+    Config configuration = Config(executable_directory + "/" + "server.conf");
+
     printf("Initializing the server\n");
 
     std::string hostname(configuration["hostname"]);
@@ -37,7 +49,7 @@ int main(int argc, char *argv[])
     GstElement *pipeline = gst_parse_launch(pipeline_args, NULL);
 
     GstElement *sink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
-
+    
     /* Start playing */
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
 

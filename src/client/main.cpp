@@ -1,7 +1,6 @@
-﻿#define _CRT_SECURE_NO_WARNINGS
+﻿#include <stdio.h>
+#define _CRT_SECURE_NO_WARNINGS
 #pragma warning(disable : 4996)
-#include <stdio.h>
-#include <lib.hh>
 #include <thread>
 #include <chrono>
 #include <inttypes.h>
@@ -46,49 +45,6 @@ GstBus *bus;
 // Multithread problem ?
 int thread_exit = 0;
 
-int network_thread_fn(void *opaque)
-{
-    uvgrtp::context ctx;
-    std::string server_hostname(configuration["hostname"]);
-    auto receive_port = stoi(configuration["receive_port"]);
-    auto send_port = stoi(configuration["send_port"]);
-    uvgrtp::session *session = ctx.create_session(server_hostname);
-    printf("Connecting to %s:%d\n", server_hostname.c_str(), receive_port);
-    uvgrtp::media_stream *rtp_stream = nullptr;
-
-    // Retry to connect every second if connection failed
-    while ((rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC)) == nullptr)
-    {
-        printf("Failed to created a socket %s\n", server_hostname.c_str());
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    }
-
-    printf("Succesfully created a socket %s\n", server_hostname.c_str());
-
-    while (!thread_exit)
-    {
-        uvgrtp::frame::rtp_frame *video_network_frame = rtp_stream->pull_frame(5);
-        if (video_network_frame)
-        {
-            auto packet = video_network_frame->payload;
-            auto packet_size = video_network_frame->payload_len;
-            printf("Client size: %lld\n", packet_size);
-        }
-        uvgrtp::frame::dealloc_frame(video_network_frame);
-
-        SDL_Event event;
-        event.type = REFRESH_EVENT;
-        SDL_PushEvent(&event);
-    }
-
-    ctx.destroy_session(session);
-
-    SDL_Event event;
-    event.type = BREAK_EVENT;
-    SDL_PushEvent(&event);
-    return 0;
-}
-
 typedef struct
 {
     int *argc;
@@ -104,7 +60,7 @@ GstFlowReturn frame_recorded_callback(GstAppSink *appsink, void *customData)
     GstVideoInfo video_info;
     gst_buffer_map(buffer, &video_frame_info, GST_MAP_READ);
     gst_video_info_from_caps(&video_info, gst_sample_get_caps(sample));
-
+    
     // printf("Video size: [%d, %d] Video format: %s\n", video_info.width, video_info.height, video_info.finfo->name);
     if (screen_buffer_w != video_info.width || screen_buffer_h != video_info.height)
     {
@@ -235,7 +191,6 @@ int main(int argc, char *argv[])
     sdlTexture = SDL_CreateTexture(sdlRenderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, screen_buffer_w, screen_buffer_h);
     SDL_Rect sdlRect;
 
-    // SDL_Thread *network_thread = SDL_CreateThread(network_thread_fn, NULL, NULL);
     GStreamerThreadArgs gstreamer_args{&argc, &argv};
     SDL_Thread *gstreamer_thread = SDL_CreateThread(gstreamer_thread_fn, NULL, &gstreamer_args);
     SDL_Event event;
