@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 pub fn build(b: *std.build.Builder) !void {
     // Standard target options allows the person running `zig build` to choose
@@ -11,7 +12,8 @@ pub fn build(b: *std.build.Builder) !void {
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
     const mode = b.standardReleaseOptions();
 
-    try build_sdl2(b);
+    try fetch_depencencies(b);
+    try build_sdl2(b, mode);
 
     const pac_exe = b.addExecutable("pac", null);
 
@@ -35,16 +37,25 @@ pub fn build(b: *std.build.Builder) !void {
     pac_exe.addIncludeDir("include");
     pac_exe.addIncludeDir("deps/SDL/include");
 
-    pac_exe.addLibPath("deps/SDL/build/Debug");
-
-    pac_exe.linkSystemLibrary("msvcrt");
-    pac_exe.linkSystemLibrary("Ws2_32");
+    if (builtin.os.tag == .windows) {
+        pac_exe.linkSystemLibrary("msvcrt");
+        pac_exe.linkSystemLibrary("Ws2_32");
+    }
     pac_exe.linkSystemLibrary("gstreamer-1.0");
     pac_exe.linkSystemLibrary("glib-2.0");
     pac_exe.linkSystemLibrary("gstapp-1.0");
     pac_exe.linkSystemLibrary("gobject-2.0");
-    pac_exe.linkSystemLibrary("SDL2maind");
-    pac_exe.linkSystemLibrary("SDL2d");
+
+    if (mode == .Debug) {
+        pac_exe.addLibPath("deps/SDL/build");
+        pac_exe.addLibPath("deps/SDL/build/Debug");
+        pac_exe.linkSystemLibrary("SDL2d");
+        pac_exe.linkSystemLibrary("SDL2maind");
+    } else {
+        pac_exe.addLibPath("deps/SDL/build/Release");
+        pac_exe.linkSystemLibrary("SDL2");
+        pac_exe.linkSystemLibrary("SDL2main");
+    }
 
     pac_exe.install();
 
@@ -58,22 +69,28 @@ pub fn build(b: *std.build.Builder) !void {
     run_step.dependOn(&run_cmd.step);
 }
 
-fn fetch_deps() !void {
-    _ = "https://github.com/libsdl-org/SDL.git";
+fn fetch_deps(b: *std.build.Builder) !void {
+    const git_repos = [_]u8{"https://github.com/libsdl-org/SDL.git",};
+    for (git_repos) |repo| {
+        const git_step = b.addSystemCommand(&[_][]const u8{
+            "git",
+            "clone",
+            repo,
+        });
+        try cmake_prebuild.step.make();
+    }
 }
 
-fn build_sdl2(b: *std.build.Builder) !void {
+fn build_sdl2(b: *std.build.Builder, mode: std.builtin.Mode) !void {
     const cmake_prebuild = b.addSystemCommand(&[_][]const u8{
         "cmake",
         "-B",
         "deps/SDL/build",
         "-S",
         "deps/SDL",
-        "-Thost=x64",
-        "-A x64",
-        "-DCMAKE_BUILD_TYPE=Debug",
+        if (mode == .Debug) "-DCMAKE_BUILD_TYPE=Debug" else "-DCMAKE_BUILD_TYPE=Release",
         "-DSDL_SHARED=OFF",
-        "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebug",
+        //"-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebug",
     });
     try cmake_prebuild.step.make();
     const cmake_build = b.addSystemCommand(&[_][]const u8{
