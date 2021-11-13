@@ -28,8 +28,8 @@ pub fn build(b: *std.build.Builder) !void {
     }
 
     // Build pac executables
-    build_pac_server_executable(b, target, mode);
     build_pac_client_executable(b, target, mode);
+    build_pac_server_executable(b, target, mode);
 
     // Copy the config file from the source to the executable directory
     try copy_configuration_files(b);
@@ -130,6 +130,8 @@ fn build_pac_client_executable(b: *std.build.Builder, target: std.zig.CrossTarge
         "-Wstrict-prototypes",
         "-Wwrite-strings",
         "-Wno-missing-field-initializers",
+        "-Wno-unused-parameter",
+        "-Wno-unknown-pragmas",
     });
 
     pac_client_exe.addIncludeDir("include");
@@ -138,13 +140,21 @@ fn build_pac_client_executable(b: *std.build.Builder, target: std.zig.CrossTarge
 
     if (builtin.os.tag == .windows) {
         pac_client_exe.linkSystemLibrary("msvcrt");
+        pac_client_exe.linkSystemLibrary("Ws2_32");
+    } else {
+        pac_client_exe.addIncludeDir("/usr/include/gstreamer-1.0");
+        pac_client_exe.addIncludeDir("/usr/include/glib-2.0");
+        pac_client_exe.addIncludeDir("/usr/lib/glib-2.0/include");
+        pac_client_exe.addIncludeDir("/usr/lib/gstreamer-1.0/include");
     }
     pac_client_exe.linkSystemLibrary("gstreamer-1.0");
     pac_client_exe.linkSystemLibrary("glib-2.0");
     pac_client_exe.linkSystemLibrary("gstapp-1.0");
     pac_client_exe.linkSystemLibrary("gobject-2.0");
+    pac_client_exe.linkSystemLibrary("gstvideo-1.0");
 
     pac_client_exe.addLibPath("deps/SDL/build");
+    pac_client_exe.addLibPath("deps/SDL_mixer/build");
     if (mode == .Debug) {
         pac_client_exe.addLibPath("deps/SDL/build/Debug");
         pac_client_exe.linkSystemLibrary("SDL2d");
