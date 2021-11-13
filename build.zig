@@ -1,10 +1,9 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const Dependency = struct { name: []const u8, url: []const u8 };
+const Dependency = struct { name: []const u8, url: []const u8, add_dependency_fn: anytype };
 
 pub fn build(b: *std.build.Builder) !void {
-
     // Standard target options allows the person running `zig build` to choose
     // what target to build for. Here we do not override the defaults, which
     // means any target is allowed, and the default is native. Other options
@@ -15,8 +14,8 @@ pub fn build(b: *std.build.Builder) !void {
     const mode = b.standardReleaseOptions();
 
     const git_repos = [_]Dependency{
-        Dependency{ .name = "SDL", .url = "https://github.com/libsdl-org/SDL.git" },
-        Dependency{ .name = "SDL_mixer", .url = "https://github.com/tris790/SDL_mixer" },
+        Dependency{ .name = "SDL", .url = "https://github.com/libsdl-org/SDL.git", .add_dependency_fn = build_sdl2 },
+        Dependency{ .name = "SDL_mixer", .url = "https://github.com/tris790/SDL_mixer", .add_dependency_fn = build_sdl2_mixer },
     };
 
     // Clone all dependencies if they are not present
@@ -25,16 +24,7 @@ pub fn build(b: *std.build.Builder) !void {
         if (!dependency_exists(repo_path)) {
             try fetch_depencency(b, repo.url, repo_path);
         }
-    }
-
-    // Build SDL if it's the first time
-    if (dependency_exists("deps/" ++ "SDL")) {
-        try build_sdl2(b, mode);
-    }
-
-    // Build SDL_mixer if it's the first time
-    if (dependency_exists("deps/" ++ "SDL_mixer")) {
-        try build_sdl2_mixer(b, mode);
+        try repo.add_dependency_fn(b, mode);
     }
 
     // Build pac executables
@@ -68,7 +58,7 @@ fn fetch_depencency(b: *std.build.Builder, repository_url: []const u8, ouput_pat
 }
 
 fn build_sdl2(b: *std.build.Builder, mode: std.builtin.Mode) !void {
-    const cmake_prebuild = b.addSystemCommand(&[_][]const u8{
+    const cmake_prebuild_cmd = &[_][]const u8{
         "cmake",
         "-B",
         "deps/SDL/build",
@@ -77,28 +67,37 @@ fn build_sdl2(b: *std.build.Builder, mode: std.builtin.Mode) !void {
         if (mode == .Debug) "-DCMAKE_BUILD_TYPE=Debug" else "-DCMAKE_BUILD_TYPE=Release",
         "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
         "-DSDL_SHARED=OFF",
-    });
+    };
 
-    try cmake_prebuild.step.make();
-    const cmake_build = b.addSystemCommand(&[_][]const u8{
+    const cmake_build_cmd = &[_][]const u8{
         "cmake",
         "--build",
         "deps/SDL/build",
         "-j",
-    });
+        if (mode != .Debug and builtin.os.tag == .windows) "--config Release" else "",
+    };
+
+    const cmake_prebuild = b.addSystemCommand(cmake_prebuild_cmd);
+    try cmake_prebuild.step.make();
+
+    const cmake_build = b.addSystemCommand(cmake_build_cmd);
     try cmake_build.step.make();
 }
 
+fn nop(_: *std.build.Builder, _: std.builtin.Mode) !void {}
 fn build_sdl2_mixer(b: *std.build.Builder, mode: std.builtin.Mode) !void {
+    const sdl_path = try (try std.fs.cwd().openDir("deps/SDL", .{})).realpathAlloc(std.testing.allocator, "");
+    const cmake_sdl_path = try std.mem.concat(std.testing.allocator, u8, &[_][]const u8{ "-DSDL_PATH=", sdl_path });
+
     const cmake_prebuild = b.addSystemCommand(&[_][]const u8{
         "cmake",
         "-B",
         "deps/SDL_mixer/build",
         "-S",
         "deps/SDL_mixer",
-        "-DSDL_PATH=../SDL",
-        "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
+        cmake_sdl_path,
         if (mode == .Debug) "-DCMAKE_BUILD_TYPE=Debug" else "-DCMAKE_BUILD_TYPE=Release",
+        "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
     });
 
     try cmake_prebuild.step.make();
@@ -107,8 +106,10 @@ fn build_sdl2_mixer(b: *std.build.Builder, mode: std.builtin.Mode) !void {
         "--build",
         "deps/SDL_mixer/build",
         "-j",
+        if (mode != .Debug and builtin.os.tag == .windows) "--config Release" else "",
     });
     try cmake_build.step.make();
+    std.debug.print("Built sdl2 mixer\n", .{});
 }
 
 fn build_pac_client_executable(b: *std.build.Builder, target: std.zig.CrossTarget, mode: std.builtin.Mode) void {
@@ -137,7 +138,6 @@ fn build_pac_client_executable(b: *std.build.Builder, target: std.zig.CrossTarge
 
     if (builtin.os.tag == .windows) {
         pac_client_exe.linkSystemLibrary("msvcrt");
-        pac_client_exe.linkSystemLibrary("Ws2_32");
     }
     pac_client_exe.linkSystemLibrary("gstreamer-1.0");
     pac_client_exe.linkSystemLibrary("glib-2.0");
@@ -159,6 +159,7 @@ fn build_pac_client_executable(b: *std.build.Builder, target: std.zig.CrossTarge
     pac_client_exe.linkSystemLibrary("SDL2_MIXER");
 
     pac_client_exe.install();
+    std.debug.print("Built pac-client\n", .{});
 
     const client_run_cmd = pac_client_exe.run();
     client_run_cmd.step.dependOn(b.getInstallStep());
@@ -212,6 +213,7 @@ fn build_pac_server_executable(b: *std.build.Builder, target: std.zig.CrossTarge
     }
 
     pac_server_exe.install();
+    std.debug.print("Built pac-server\n", .{});
 
     const server_run_cmd = pac_server_exe.run();
     server_run_cmd.step.dependOn(b.getInstallStep());
