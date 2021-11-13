@@ -70,16 +70,15 @@ int main(int argc, char *argv[])
     printf("Initializing the server\n");
 
     ////////////
-    for (int i = 0; i < 20; i += 20)
+    for (int i = 0; i < 20; i++)
     {
-        for (int j = 0; j < 20; j += 20)
+        for (int j = 0; j < 20; j++)
         {
             SDL_Event fake_event;
-            fake_event.type = SDL_MOUSEMOTION;
-            fake_event.motion.x = i;
-            fake_event.motion.y = j;
+            fake_event.type = SDL_KEYDOWN;
+            fake_event.button.button = SDLK_a;
             handle_sdl_event(fake_event);
-            Sleep(100);
+            Sleep(1000);
         }
     }
     return 0;
