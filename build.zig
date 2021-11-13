@@ -30,7 +30,6 @@ pub fn build(b: *std.build.Builder) !void {
     // Build pac executables
     build_pac_client_executable(b, target, mode);
     build_pac_server_executable(b, target, mode);
-
     // Copy the config file from the source to the executable directory
     try copy_configuration_files(b);
 }
