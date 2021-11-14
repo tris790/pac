@@ -109,7 +109,8 @@ GstFlowReturn frame_recorded_callback(GstAppSink *appsink, void *customData)
     gst_buffer_map(buffer, &video_frame_info, GST_MAP_READ);
     gst_video_info_from_caps(&video_info, gst_sample_get_caps(sample));
 
-    logger.debug("[Transcode] Video Stream: width=%d height=%d fps=%d.%d format=%s size=%d (frame: %d)", video_info.width, video_info.height, video_info.fps_n, video_info.fps_d, video_info.finfo->name, video_info.size, frame_count);
+    if (frame_count % 120 == 0)
+        logger.debug("[Transcode] Video Stream: width=%d height=%d fps=%d.%d format=%s size=%d (frame: %d)", video_info.width, video_info.height, video_info.fps_n, video_info.fps_d, video_info.finfo->name, video_info.size, frame_count);
 
     if (screen_buffer_w != video_info.width || screen_buffer_h != video_info.height)
     {
