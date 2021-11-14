@@ -18,6 +18,7 @@
 
 #include "pac_network.h"
 #include "config.h"
+#include "logger.h"
 
 Config configuration = Config("client.conf");
 
@@ -53,17 +54,18 @@ int network_thread_fn(void *opaque)
     auto receive_port = stoi(configuration["receive_port"]);
     auto send_port = stoi(configuration["send_port"]);
     uvgrtp::session *session = ctx.create_session(server_hostname);
-    printf("Connecting to %s:%d\n", server_hostname.c_str(), receive_port);
     uvgrtp::media_stream *rtp_stream = nullptr;
+
+    logger.debug("Connecting to %s:%d", server_hostname.c_str(), receive_port);
 
     // Retry to connect every second if connection failed
     while ((rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC)) == nullptr)
     {
-        printf("Failed to created a socket %s\n", server_hostname.c_str());
+        logger.error("Failed to created a socket %s", server_hostname.c_str());
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 
-    printf("Succesfully created a socket %s\n", server_hostname.c_str());
+    logger.debug("Succesfully created a socket %s", server_hostname.c_str());
 
     while (!thread_exit)
     {
@@ -72,7 +74,7 @@ int network_thread_fn(void *opaque)
         {
             auto packet = video_network_frame->payload;
             auto packet_size = video_network_frame->payload_len;
-            printf("Client size: %lld\n", packet_size);
+            logger.debug("Client size: %lld", packet_size);
         }
         uvgrtp::frame::dealloc_frame(video_network_frame);
 
@@ -97,6 +99,8 @@ typedef struct
 
 GstFlowReturn frame_recorded_callback(GstAppSink *appsink, void *customData)
 {
+    static guint frame_count = 0;
+
     // Pulling the frame from gstreamer
     GstSample *sample = gst_app_sink_pull_sample(appsink);
     GstBuffer *buffer = gst_sample_get_buffer(sample);
@@ -105,7 +109,8 @@ GstFlowReturn frame_recorded_callback(GstAppSink *appsink, void *customData)
     gst_buffer_map(buffer, &video_frame_info, GST_MAP_READ);
     gst_video_info_from_caps(&video_info, gst_sample_get_caps(sample));
 
-    // printf("Video size: [%d, %d] Video format: %s\n", video_info.width, video_info.height, video_info.finfo->name);
+    logger.debug("[Transcode] Video Stream: width=%d height=%d fps=%d.%d format=%s size=%d (frame: %d)", video_info.width, video_info.height, video_info.fps_n, video_info.fps_d, video_info.finfo->name, video_info.size, frame_count);
+
     if (screen_buffer_w != video_info.width || screen_buffer_h != video_info.height)
     {
         screen_buffer_w = video_info.width;
@@ -123,14 +128,16 @@ GstFlowReturn frame_recorded_callback(GstAppSink *appsink, void *customData)
     }
     memcpy(screen_buffer, video_frame_info.data, video_frame_info.size);
 
+    frame_count++;
     gst_buffer_unmap(buffer, &video_frame_info);
     gst_sample_unref(sample);
 
     SDL_Event event;
     event.type = REFRESH_EVENT;
+
     if (!SDL_PushEvent(&event))
     {
-        printf("Error adding refresh event: %s\n", SDL_GetError());
+        logger.error("Error adding refresh event: %s", SDL_GetError());
     }
 
     return GST_FLOW_OK;
@@ -140,7 +147,7 @@ int gstreamer_thread_fn(void *opaque)
 {
     GStreamerThreadArgs *args = (GStreamerThreadArgs *)opaque;
     gst_init(args->argc, args->argv);
-    auto pipeline_args = "udpsrc port=9996 caps=\"application/x-rtp, media=video, clock-rate=90000, encoding-name=H264, payload=96\" ! rtph264depay ! queue ! h264parse ! nvh264dec ! videoconvert ! video/x-raw,format=I420 ! appsink name=sink";
+    auto pipeline_args = "udpsrc port=9996 caps=\"application/x-rtp, media=video, clock-rate=90000, encoding-name=H264, payload=96\" ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! video/x-raw,format=I420 ! appsink name=sink";
     pipeline = gst_parse_launch(pipeline_args, NULL);
 
     GstElement *sink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
@@ -164,7 +171,9 @@ int gstreamer_thread_fn(void *opaque)
         gchar *debug;
 
         gst_message_parse_error(msg, &err, &debug);
-        g_print("Error: %s\n", err->message);
+
+        logger.error("GST_MESSAGE_ERROR - %s", err->message);
+
         g_error_free(err);
         g_free(debug);
 
@@ -184,18 +193,22 @@ int gstreamer_thread_fn(void *opaque)
     gst_element_set_state(pipeline, GST_STATE_NULL);
     gst_object_unref(pipeline);
 
-    printf("Closing Gstreamer thread\n");
+    logger.debug("Closing Gstreamer thread");
 
     return 0;
 }
 
 int main(int argc, char *argv[])
 {
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
+    logger.info("Initializing the client");
+
+    if (SDL_Init(SDL_INIT_VIDEO))
     {
-        printf("Could not initialize SDL - %s\n", SDL_GetError());
+        logger.error("Could not initialize SDL - %s", SDL_GetError());
         return -1;
     }
+
+    logger.debug("[Now] SDL initialized");
 
     SDL_Window *screen;
     //SDL 2.0 Support for multiple windows
@@ -204,23 +217,26 @@ int main(int argc, char *argv[])
                               window_width, window_heigth, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if (!screen)
     {
-        printf("SDL: could not create window - exiting:%s\n", SDL_GetError());
+        logger.error("SDL: could not create window - exiting:%s", SDL_GetError());
         return -1;
     }
+
+    logger.debug("[Now] Window created");
+
     sdlRenderer = SDL_CreateRenderer(screen, -1, 0);
 
     // Initialisation mixer
     int audiomixer = Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 512);
     if (audiomixer < 0)
     {
-        fprintf(stderr, "Unable to open audio: %s\n", SDL_GetError());
+        logger.error("Unable to open audio: %s", SDL_GetError());
         exit(-1);
     }
 
     audiomixer = Mix_AllocateChannels(4);
     if (audiomixer < 0)
     {
-        fprintf(stderr, "Unable to allocate mixing channels: %s\n", SDL_GetError());
+        logger.error("Unable to allocate mixing channels: %s", SDL_GetError());
         exit(-1);
     }
 
@@ -229,7 +245,7 @@ int main(int argc, char *argv[])
     mmusic = Mix_LoadWAV(path.c_str());
     if (mmusic == NULL)
     {
-        fprintf(stderr, "Unable to load wave file: %s\n", path.c_str());
+        logger.error("Unable to load wave file: %s", path.c_str());
     }
 
     sdlTexture = SDL_CreateTexture(sdlRenderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, screen_buffer_w, screen_buffer_h);
@@ -251,7 +267,7 @@ int main(int argc, char *argv[])
         {
             if (SDL_UpdateTexture(sdlTexture, NULL, screen_buffer, screen_buffer_w))
             {
-                printf("Error updating texture: %s\n", SDL_GetError());
+                logger.error("Error updating texture: %s", SDL_GetError());
             }
 
             //FIX: If window is resize
@@ -266,6 +282,8 @@ int main(int argc, char *argv[])
         }
         else if (event.type == SDL_KEYDOWN)
         {
+            logger.debug("SDL_Event: We got a key down event (SDL_KEYDOWN)");
+
             if (event.key.keysym.sym == SDLK_ESCAPE)
             {
                 SDL_Event event;
@@ -275,6 +293,8 @@ int main(int argc, char *argv[])
             else if (event.key.keysym.sym == SDLK_SPACE)
             {
                 isPlaying = !isPlaying;
+
+                logger.debug("Reporting playback state %s", (isPlaying) ? "played" : "paused");
             }
         }
         else if (event.type == SDL_WINDOWEVENT)
@@ -284,6 +304,8 @@ int main(int argc, char *argv[])
         }
         else if (event.type == SDL_QUIT)
         {
+            logger.debug("SDL_Event: We got a quit event (SDL_QUIT)");
+
             thread_exit = 1;
             gst_element_set_state(pipeline, GST_STATE_NULL);
             gst_element_send_event(pipeline, gst_event_new_eos());
