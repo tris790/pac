@@ -6,70 +6,79 @@
 // Time format
 #define LOGGER_PRETTY_TIME_FORMAT "%Y-%m-%d %H:%M:%S"
 
-class Logger {
-   public:
+class Logger
+{
+public:
     Logger() {}
 
-    void fatal(std::string message) { fatal(std::cout, message); }
+    void fatal(const std::string &message) { fatal(std::cout, message); }
 
-    void fatal(std::ostream &outputFile, std::string message) { log("FATAL", message, outputFile); }
+    void fatal(std::ostream &outputFile, const std::string &message) { log("FATAL", message, outputFile); }
 
     template <typename... Args>
-    void fatal(const std::string &message, Args... args) {
+    void fatal(const std::string &message, Args... args)
+    {
         auto messageFormated = stringFormat(message, args...);
         fatal(messageFormated);
     }
 
     template <typename... Args>
-    void fatal(std::ostream &outputFile, const std::string &message, Args... args) {
+    void fatal(std::ostream &outputFile, const std::string &message, Args... args)
+    {
         auto messageFormated = stringFormat(message, args...);
         fatal(outputFile, messageFormated);
     }
 
-    void error(std::string message) { error(std::cout, message); }
+    void error(const std::string &message) { error(std::cout, message); }
 
-    void error(std::ostream &outputFile, std::string message) { log("ERROR", message, outputFile); }
+    void error(std::ostream &outputFile, const std::string &message) { log("ERROR", message, outputFile); }
 
     template <typename... Args>
-    void error(const std::string &message, Args... args) {
+    void error(const std::string &message, Args... args)
+    {
         auto messageFormated = stringFormat(message, args...);
         error(messageFormated);
     }
 
     template <typename... Args>
-    void error(std::ostream &outputFile, const std::string &message, Args... args) {
+    void error(std::ostream &outputFile, const std::string &message, Args... args)
+    {
         auto messageFormated = stringFormat(message, args...);
         error(outputFile, messageFormated);
     }
 
-    void warning(std::string message) { warning(std::cout, message); }
+    void warning(const std::string &message) { warning(std::cout, message); }
 
-    void warning(std::ostream &outputFile, std::string message) { log("WARN", message, outputFile); }
+    void warning(std::ostream &outputFile, const std::string &message) { log("WARN", message, outputFile); }
 
     template <typename... Args>
-    void warning(const std::string &message, Args... args) {
+    void warning(const std::string &message, Args... args)
+    {
         auto messageFormated = stringFormat(message, args...);
         warning(messageFormated);
     }
 
     template <typename... Args>
-    void warning(std::ostream &outputFile, const std::string &message, Args... args) {
+    void warning(std::ostream &outputFile, const std::string &message, Args... args)
+    {
         auto messageFormated = stringFormat(message, args...);
         warning(outputFile, messageFormated);
     }
 
-    void info(std::string message) { info(std::cout, message); }
+    void info(const std::string &message) { info(std::cout, message); }
 
-    void info(std::ostream &outputFile, std::string message) { log("INFO", message, outputFile); }
+    void info(std::ostream &outputFile, const std::string &message) { log("INFO", message, outputFile); }
 
     template <typename... Args>
-    void info(const std::string &message, Args... args) {
+    void info(const std::string &message, Args... args)
+    {
         auto messageFormated = stringFormat(message, args...);
         info(messageFormated);
     }
 
     template <typename... Args>
-    void info(std::ostream &outputFile, const std::string &message, Args... args) {
+    void info(std::ostream &outputFile, const std::string &message, Args... args)
+    {
         auto messageFormated = stringFormat(message, args...);
         info(outputFile, messageFormated);
     }
@@ -79,19 +88,22 @@ class Logger {
     void debug(std::ostream &outputFile, std::string message) { log("DEBUG", message, outputFile); }
 
     template <typename... Args>
-    void debug(const std::string &message, Args... args) {
+    void debug(const std::string &message, Args... args)
+    {
         auto messageFormated = stringFormat(message, args...);
         debug(messageFormated);
     }
 
     template <typename... Args>
-    void debug(std::ostream &outputFile, const std::string &message, Args... args) {
+    void debug(std::ostream &outputFile, const std::string &message, Args... args)
+    {
         auto messageFormated = stringFormat(message, args...);
         debug(outputFile, messageFormated);
     }
 
-   private:
-    void log(std::string level, std::string message, std::ostream &outputFile = std::cout) {
+private:
+    void log(std::string level, std::string message, std::ostream &outputFile = std::cout)
+    {
         std::stringstream output;
 
         auto time = getCurrentTime();
@@ -105,17 +117,20 @@ class Logger {
         outputFile << output.str();
     }
 
-    time_t getCurrentTime() {
+    time_t getCurrentTime()
+    {
         auto now = std::chrono::system_clock::now();
         return std::chrono::system_clock::to_time_t(now);
     }
 
     // Source : https://stackoverflow.com/questions/2342162/stdstring-formatting-like-sprintf
     template <typename... Args>
-    std::string stringFormat(const std::string &format, Args... args) {
-        int size_s = std::snprintf(nullptr, 0, format.c_str(), args...) + 1;  // Extra space for '\0'
+    std::string stringFormat(const std::string &format, Args... args)
+    {
+        int size_s = std::snprintf(nullptr, 0, format.c_str(), args...) + 1; // Extra space for '\0'
 
-        if (size_s <= 0) {
+        if (size_s <= 0)
+        {
             throw std::runtime_error("Error during formatting.");
         }
 
@@ -124,7 +139,7 @@ class Logger {
 
         std::snprintf(buf.get(), size, format.c_str(), args...);
 
-        return std::string(buf.get(), buf.get() + size - 1);  // We don't want the '\0' inside
+        return std::string(buf.get(), buf.get() + size - 1); // We don't want the '\0' inside
     }
 };
 

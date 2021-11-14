@@ -147,7 +147,7 @@ int gstreamer_thread_fn(void *opaque)
 {
     GStreamerThreadArgs *args = (GStreamerThreadArgs *)opaque;
     gst_init(args->argc, args->argv);
-    auto pipeline_args = "udpsrc port=9996 caps=\"application/x-rtp, media=video, clock-rate=90000, encoding-name=H264, payload=96\" ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! video/x-raw,format=I420 ! appsink name=sink";
+    auto pipeline_args = "udpsrc port=9996 caps=\"application/x-rtp, media=video, clock-rate=90000, encoding-name=H264, payload=96\" ! rtph264depay ! queue ! h264parse ! nvh264dec ! videoconvert ! video/x-raw,format=I420 ! appsink name=sink";
     pipeline = gst_parse_launch(pipeline_args, NULL);
 
     GstElement *sink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
 {
     logger.info("Initializing the client");
 
-    if (SDL_Init(SDL_INIT_VIDEO))
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     {
         logger.error("Could not initialize SDL - %s", SDL_GetError());
         return -1;
