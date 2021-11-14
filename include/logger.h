@@ -83,9 +83,9 @@ public:
         info(outputFile, messageFormated);
     }
 
-    void debug(std::string message) { debug(std::cout, message); }
+    void debug(const std::string &message) { debug(std::cout, message); }
 
-    void debug(std::ostream &outputFile, std::string message) { log("DEBUG", message, outputFile); }
+    void debug(std::ostream &outputFile, const std::string &message) { log("DEBUG", message, outputFile); }
 
     template <typename... Args>
     void debug(const std::string &message, Args... args)
@@ -102,7 +102,7 @@ public:
     }
 
 private:
-    void log(std::string level, std::string message, std::ostream &outputFile = std::cout)
+    void log(const std::string &level, const std::string &message, std::ostream &outputFile = std::cout)
     {
         std::stringstream output;
 
