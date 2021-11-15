@@ -28,6 +28,10 @@ else()
     target_include_directories(${APP_NAME} PUBLIC /usr/lib/gstreamer-1.0/include)
 endif()
 
+if (UNIX)
+    target_link_Libraries(${APP_NAME} PUBLIC X11 Xtst)
+endif()
+
 target_link_libraries(${APP_NAME} PUBLIC gstreamer-1.0 glib-2.0 gstapp-1.0 gobject-2.0)
 
 # Copying config

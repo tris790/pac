@@ -29,25 +29,34 @@ void emulate_keyboard_key(Uint8 key)
     SendInput(1, &input, sizeof(INPUT));
 }
 
-void emulate_mouse_click(Uint8 button)
+void emulate_mouse_click(Uint8 button, bool pressed)
 {
     INPUT input = {0};
     input.type = INPUT_MOUSE;
     if (button == SDL_BUTTON_LEFT)
     {
-        input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+        input.mi.dwFlags = pressed ? MOUSEEVENTF_LEFTDOWN ? MOUSEEVENTF_LEFTUP;
     }
     else if (button == SDL_BUTTON_RIGHT)
     {
-        input.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+        input.mi.dwFlags = pressed ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP;
     }
 
     SendInput(1, &input, sizeof(INPUT));
 }
 #else
+#include <X11/Xlib.h>
+#include <unistd.h>
+#include <X11/extensions/XTest.h>
+
 void emulate_mouse_movement(int mouse_x, int mouse_y)
 {
-    printf("Not Implemented\n");
+    Display *display = XOpenDisplay(0);
+
+    Window root = DefaultRootWindow(display);
+    XWarpPointer(display, None, root, 0, 0, 0, 0, mouse_x, mouse_y);
+    XFlush(display);
+    XCloseDisplay(display);
 }
 
 void emulate_keyboard_key(Uint8 key)
@@ -55,9 +64,31 @@ void emulate_keyboard_key(Uint8 key)
     printf("Not Implemented\n");
 }
 
-void emulate_mouse_click(Uint8 button)
+void emulate_mouse_click(Uint8 button, bool pressed)
 {
-    printf("Not Implemented\n");
+//Button 1: The 'Left-Click' mouse button
+//Button 2: The 'Middle-Click' mouse button, or pressing down on the scroll wheel
+//Button 3: The 'Right-Click' mouse button
+//Button 4: Scrolling up one increment on the mouse wheel
+//Button 5: Scrolling down one increment on the mouse wheel
+//Button 6: Usually the 'back' button or scrolling one increment left on your mouse wheel
+//Button 7: Usually the 'forward' button or scrolling one increment right on your mouse wheel
+//Buttons 6-9 can differ depending on the type of mouse you have. Some mice may not even have these buttons at all!
+
+    int x11_button = 0; 
+    if (button == SDL_BUTTON_LEFT)
+    {
+        x11_button = 1;
+    }
+    else if (button == SDL_BUTTON_RIGHT)
+    {
+        x11_button = 3;
+    }
+
+    Display *display = XOpenDisplay(NULL);
+    XTestFakeButtonEvent(display, x11_button, pressed, CurrentTime);
+    XFlush(display);
+    XCloseDisplay(display);
 }
 #endif
 
@@ -73,13 +104,13 @@ void handle_sdl_event(SDL_Event event)
     }
     else if (event_type == SDL_MOUSEBUTTONDOWN)
     {
-        printf("Mouse left click evt\n");
-        emulate_mouse_click(event.button.button);
+        printf("Mouse pressed evt\n");
+        emulate_mouse_click(event.button.button, true);
     }
     else if (event_type == SDL_MOUSEBUTTONUP)
     {
-        printf("Mouse right click evt\n");
-        emulate_mouse_click(event.button.button);
+        printf("Mouse release click evt\n");
+        emulate_mouse_click(event.button.button, false);
     }
     else if (event_type == SDL_MOUSEWHEEL)
     {
@@ -93,9 +124,6 @@ void handle_sdl_event(SDL_Event event)
     {
         printf("Keyboard evt %d\n", event.button.button);
         emulate_keyboard_key(event.button.button);
-    }
-    else if (event_type == SDL_MOUSEBUTTONUP)
-    {
     }
 }
 #endif

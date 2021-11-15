@@ -11,7 +11,7 @@
 #include <assert.h>
 
 #include <SDL_events.h>
-
+#include <SDL_keycode.h>
 #include "pac_network.h"
 #include "config.h"
 #include "input_emulator.h"
@@ -70,17 +70,17 @@ int main(int argc, char *argv[])
     printf("Initializing the server\n");
 
     ////////////
-    for (int i = 0; i < 20; i++)
-    {
-        for (int j = 0; j < 20; j++)
-        {
-            SDL_Event fake_event;
-            fake_event.type = SDL_KEYDOWN;
-            fake_event.button.button = SDLK_a;
-            handle_sdl_event(fake_event);
-            Sleep(1000);
-        }
-    }
+    SDL_Event fake_event;
+    fake_event.type = SDL_MOUSEBUTTONDOWN;
+    //fake_event.type = SDL_MOUSEMOTION;
+    fake_event.button.button = SDL_BUTTON_RIGHT;
+    fake_event.motion.x = 0;
+    fake_event.motion.y = 0;
+    handle_sdl_event(fake_event);
+    fake_event.type = SDL_MOUSEBUTTONUP;
+    handle_sdl_event(fake_event);
+
+    //Sleep(1000);
     return 0;
 
     ////////////
