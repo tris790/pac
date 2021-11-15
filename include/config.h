@@ -3,7 +3,6 @@
 #include <string>
 #include <map>
 #include <fstream>
-#include "logger.h"
 
 class Config
 {
@@ -45,6 +44,8 @@ public:
 
 					value.erase(std::remove(value.begin(), value.end(), '\r'), value.end());
 					value.erase(std::remove(value.begin(), value.end(), '\n'), value.end());
+
+					Config::conf_dict.emplace(key, value);
 				}
 			}
 			catch (const std::exception &e)
