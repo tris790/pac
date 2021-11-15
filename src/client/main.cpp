@@ -148,8 +148,7 @@ int gstreamer_thread_fn(void *opaque)
 {
     GStreamerThreadArgs *args = (GStreamerThreadArgs *)opaque;
     gst_init(args->argc, args->argv);
-    auto pipeline_args = "udpsrc port=9996 caps=\"application/x-rtp, media=video, clock-rate=90000, encoding-name=H264, payload=96\" ! rtph264depay ! queue ! h264parse ! nvh264dec ! videoconvert ! video/x-raw,format=I420 ! appsink name=sink";
-    pipeline = gst_parse_launch(pipeline_args, NULL);
+    pipeline = gst_parse_launch(configuration["gstreamer_pipeline_args"].c_str(), NULL);
 
     GstElement *sink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
     gst_app_sink_set_emit_signals((GstAppSink *)sink, true);
@@ -203,7 +202,11 @@ int main(int argc, char *argv[])
 {
     logger.info("Initializing the client");
 
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
+    auto steam_audio_enable = std::strcmp(configuration["stream_audio"].c_str(), "true") == 0;
+
+    if (steam_audio_enable
+            ? SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)
+            : SDL_Init(SDL_INIT_VIDEO))
     {
         logger.error("Could not initialize SDL - %s", SDL_GetError());
         return -1;
@@ -226,27 +229,33 @@ int main(int argc, char *argv[])
 
     sdlRenderer = SDL_CreateRenderer(screen, -1, 0);
 
-    // Initialisation mixer
-    int audiomixer = Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 512);
-    if (audiomixer < 0)
+    if (steam_audio_enable)
     {
-        logger.error("Unable to open audio: %s", SDL_GetError());
-        exit(-1);
-    }
+        // Initialisation mixer
+        int audiomixer = Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 512);
+        if (audiomixer < 0)
+        {
+            logger.error("Unable to open audio: %s", SDL_GetError());
+            exit(-1);
+        }
 
-    audiomixer = Mix_AllocateChannels(4);
-    if (audiomixer < 0)
-    {
-        logger.error("Unable to allocate mixing channels: %s", SDL_GetError());
-        exit(-1);
-    }
+        audiomixer = Mix_AllocateChannels(4);
+        if (audiomixer < 0)
+        {
+            logger.error("Unable to allocate mixing channels: %s", SDL_GetError());
+            exit(-1);
+        }
 
-    Mix_Chunk *mmusic;
-    std::string path = configuration["audio_file_path"];
-    mmusic = Mix_LoadWAV(path.c_str());
-    if (mmusic == NULL)
-    {
-        logger.error("Unable to load wave file: %s", path.c_str());
+        Mix_Chunk *mmusic;
+        std::string path = configuration["audio_file_path"];
+        mmusic = Mix_LoadWAV(path.c_str());
+        if (mmusic == NULL)
+        {
+            logger.error("Unable to load wave file: %s", path.c_str());
+        }
+
+        // Lance la musique depuis le début du fichier
+        Mix_PlayChannel(stoi(configuration["channel"]), mmusic, stoi(configuration["loop"]));
     }
 
     sdlTexture = SDL_CreateTexture(sdlRenderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, screen_buffer_w, screen_buffer_h);
@@ -257,8 +266,6 @@ int main(int argc, char *argv[])
     SDL_Thread *gstreamer_thread = SDL_CreateThread(gstreamer_thread_fn, NULL, &gstreamer_args);
     SDL_Event event;
     bool isPlaying = true;
-    //Lance la musique depuis le début du fichier
-    Mix_PlayChannel(stoi(configuration["channel"]), mmusic, stoi(configuration["loop"]));
 
     while (true)
     {
