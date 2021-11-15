@@ -39,9 +39,13 @@ public:
 				while (std::getline(Config::ifp, current_line))
 				{
 					size_t pos = current_line.find(delim);
-					Config::conf_dict.emplace(
-						current_line.substr(0, pos),
-						current_line.substr(pos + delim.length(), current_line.length()));
+					auto key = current_line.substr(0, pos);
+					auto value = current_line.substr(pos + delim.length(), current_line.length());
+
+					value.erase(std::remove(value.begin(), value.end(), '\r'), value.end());
+					value.erase(std::remove(value.begin(), value.end(), '\n'), value.end());
+
+					Config::conf_dict.emplace(key, value);
 				}
 			}
 			catch (const std::exception &e)
