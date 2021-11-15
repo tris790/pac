@@ -12,6 +12,7 @@
 
 #include "pac_network.h"
 #include "config.h"
+#include "logger.h"
 
 Config configuration = Config("server.conf");
 
@@ -19,7 +20,7 @@ Config configuration = Config("server.conf");
 
 int main(int argc, char *argv[])
 {
-    printf("Initializing the server\n");
+    logger.info("Initializing the server");
 
     std::string hostname(configuration["hostname"]);
     auto receive_port = stoi(configuration["receive_port"]);
@@ -50,6 +51,7 @@ int main(int argc, char *argv[])
 
     /* Start playing */
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
+    logger.debug("[Now] Pipeline started");
 
     /* Wait until error or EOS */
     GstBus *bus = gst_element_get_bus(pipeline);
@@ -64,7 +66,7 @@ int main(int argc, char *argv[])
         gchar *debug;
 
         gst_message_parse_error(msg, &err, &debug);
-        g_print("Error: %s\n", err->message);
+        logger.error("GST_MESSAGE_ERROR - %s", err->message);
         g_error_free(err);
         g_free(debug);
 
