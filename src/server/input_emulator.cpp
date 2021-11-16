@@ -86,7 +86,7 @@ void InputEmulator::emulate_mouse_click(Uint8 button, bool pressed)
 }
 #endif
 
-void InputEmulator::handle_sdl_event(SDL_Event event)
+void InputEmulator::handle_sdl_event(SDL_Event &event)
 {
     SDL_EventType event_type = (SDL_EventType)event.type;
     if (event_type == SDL_MOUSEMOTION)

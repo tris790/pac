@@ -8,7 +8,7 @@
 class InputEmulator
 {
 public:
-    static void handle_sdl_event(SDL_Event event);
+    static void handle_sdl_event(SDL_Event &event);
 
 private:
     static void emulate_mouse_movement(int mouse_x, int mouse_y);
