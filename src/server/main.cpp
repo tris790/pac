@@ -69,21 +69,6 @@ int main(int argc, char *argv[])
 {
     printf("Initializing the server\n");
 
-    ////////////
-    SDL_Event fake_event;
-    fake_event.type = SDL_MOUSEBUTTONDOWN;
-    //fake_event.type = SDL_MOUSEMOTION;
-    fake_event.button.button = SDL_BUTTON_RIGHT;
-    fake_event.motion.x = 0;
-    fake_event.motion.y = 0;
-    handle_sdl_event(fake_event);
-    fake_event.type = SDL_MOUSEBUTTONUP;
-    handle_sdl_event(fake_event);
-
-    //Sleep(1000);
-    return 0;
-
-    ////////////
     std::string hostname(configuration["hostname"]);
     auto receive_port = stoi(configuration["receive_port"]);
     auto send_port = stoi(configuration["send_port"]);
