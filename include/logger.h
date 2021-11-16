@@ -143,4 +143,4 @@ private:
     }
 };
 
-Logger logger;
+static Logger logger;
