@@ -10,9 +10,12 @@
 #include <string.h>
 #include <assert.h>
 
+#include <SDL_events.h>
+#include <SDL_keycode.h>
 #include "pac_network.h"
 #include "config.h"
 #include "logger.h"
+#include "input_emulator.h"
 
 Config configuration = Config("server.conf");
 
