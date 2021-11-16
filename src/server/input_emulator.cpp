@@ -1,4 +1,6 @@
 #include <input_emulator.h>
+#include <iostream>
+#include <logger.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -55,7 +57,7 @@ void InputEmulator::emulate_mouse_movement(int mouse_x, int mouse_y)
 
 void InputEmulator::emulate_keyboard_key(Uint8 key)
 {
-    printf("Not Implemented\n");
+    logger::warning("Not Implemented");
 }
 
 void InputEmulator::emulate_mouse_click(Uint8 button, bool pressed)
@@ -93,31 +95,31 @@ void InputEmulator::handle_sdl_event(SDL_Event &event)
     {
         int mouse_x = event.motion.x;
         int mouse_y = event.motion.y;
-        printf("Mouse move evt: %d %d\n", mouse_x, mouse_y);
+        logger.debug("Mouse move evt: %d %d", mouse_x, mouse_y);
         emulate_mouse_movement(mouse_x, mouse_y);
     }
     else if (event_type == SDL_MOUSEBUTTONDOWN)
     {
-        printf("Mouse pressed evt\n");
+        logger.debug("Mouse pressed evt");
         emulate_mouse_click(event.button.button, true);
     }
     else if (event_type == SDL_MOUSEBUTTONUP)
     {
-        printf("Mouse release click evt\n");
+        logger.debug("Mouse release click evt");
         emulate_mouse_click(event.button.button, false);
     }
     else if (event_type == SDL_MOUSEWHEEL)
     {
-        printf("Not Implemented\n");
+        logger.warning("Not Implemented");
     }
     else if (event_type == SDL_KEYDOWN)
     {
-        printf("Keyboard evt %d\n", event.button.button);
+        logger.debug("Keyboard evt %d", event.button.button);
         emulate_keyboard_key(event.button.button);
     }
     else if (event_type == SDL_KEYUP)
     {
-        printf("Keyboard evt %d\n", event.button.button);
+        logger.debug("Keyboard evt %d", event.button.button);
         emulate_keyboard_key(event.button.button);
     }
 }
