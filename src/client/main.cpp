@@ -102,72 +102,6 @@ typedef struct
     char ***argv;
 } GStreamerThreadArgs;
 
-
-
-GstFlowReturn audio_recorded_callback(GstAppSink *appsink, void *customData)
-{
-    static guint frame_count = 0;
-
-    // Pulling the frame from gstreamer
-    
-    GstSample *sample = gst_app_sink_pull_sample(appsink);
-    GstBuffer *buffer = gst_sample_get_buffer(sample);
-    GstMapInfo audio_chunk_info;
-    GstAudioInfo audio_info;
-    gst_buffer_map(buffer, &audio_chunk_info, GST_MAP_READ);
-    gst_audio_info_from_caps(&audio_info, gst_sample_get_caps(sample));
-
-
-    if (frame_count % 120 == 0)
-    {
-        logger.debug("audio callback called");
-        logger.debug("sink pull sample");
-        logger.debug("open mixer");
-        logger.debug("params rate:%d",audio_info.rate);
-        logger.debug("params channels:%d",audio_info.channels);
-        logger.debug("params byte per frame:%d",audio_info.bpf);
-        logger.debug("params format:%s",audio_info.finfo->name);
-    }
-    if (frame_count==0)
-    {
-        auto audiomixer = Mix_OpenAudio(audio_info.rate, MIX_DEFAULT_FORMAT, audio_info.channels, audio_info.bpf);
-        if ( audiomixer < 0 ) {
-            fprintf(stderr, "Unable to open audio: %s\n", SDL_GetError());
-            exit(1);
-        }
-        logger.debug("allocate channels");
-        audiomixer = Mix_AllocateChannels(audio_info.channels);
-        if (audiomixer < 0)
-        {
-            fprintf(stderr, "Unable to allocate mixing channels: %s\n", SDL_GetError());
-            exit(-1);
-        }
-    }
-    
-    if(audio_buffer_length!=audio_chunk_info.size)
-    {
-        logger.debug("buffer length : %d",audio_chunk_info.size);
-        if (audio_buffer)
-        {
-            free(audio_buffer);
-        }
-        if (mmusic)
-        {
-            free(mmusic);
-        }
-
-        audio_buffer = (unsigned char *)malloc(audio_chunk_info.size);
-        audio_buffer_length=audio_chunk_info.size;
-    }
-
-    memcpy(audio_buffer, audio_chunk_info.data, audio_buffer_length);
-    
-    gst_buffer_unmap(buffer, &audio_chunk_info);
-    gst_sample_unref(sample);
-    frame_count++;
-
-    return GST_FLOW_OK;
-}
 GstFlowReturn frame_recorded_callback(GstAppSink *appsink, void *customData)
 {
     static guint frame_count = 0;
@@ -221,19 +155,9 @@ int gstreamer_thread_audio_fn(void *opaque)
     gst_init(args->argc, args->argv);
     logger.debug("lecture du pipeline");
     auto pipeline_args = configuration["gst_audio_receiver"];
-    logger.debug("pipeline is : %s",pipeline_args.c_str());
+    logger.debug("pipeline is : %s", pipeline_args.c_str());
     pipeline_audio = gst_parse_launch(pipeline_args.c_str(), NULL);
 
-    // logger.debug("get sink");
-    // GstElement *sink = gst_bin_get_by_name(GST_BIN(pipeline_audio), "sink_audio");
-    // gst_app_sink_set_emit_signals((GstAppSink *)sink, true);
-    // gst_app_sink_set_drop((GstAppSink *)sink, true);
-    // gst_app_sink_set_max_buffers((GstAppSink *)sink, 1);
-    // logger.debug("set audio callback");
-    // GstAppSinkCallbacks callbacks = {NULL, NULL, (GstFlowReturn(*)(GstAppSink *, gpointer))audio_recorded_callback};
-    // gst_app_sink_set_callbacks(GST_APP_SINK(sink), &callbacks, NULL, NULL);
-
-    // logger.debug("lunch pipeline");
     gst_element_set_state(pipeline_audio, GST_STATE_PLAYING);
 
     logger.debug("bus");
@@ -362,34 +286,12 @@ int main(int argc, char *argv[])
     sdlTexture = SDL_CreateTexture(sdlRenderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, screen_buffer_w, screen_buffer_h);
     SDL_Rect sdlRect;
 
-    // auto audiomixer = Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4);
-    // if ( audiomixer < 0 ) {
-    //     fprintf(stderr, "Unable to open audio: %s\n", SDL_GetError());
-    //     exit(1);
-    // }
-    // logger.debug("allocate channels");
-    // audiomixer = Mix_AllocateChannels(2);
-    // if (audiomixer < 0)
-    // {
-    //     fprintf(stderr, "Unable to allocate mixing channels: %s\n", SDL_GetError());
-    //     exit(-1);
-    // }
-
-    //mmusic = Mix_LoadWAV_RW(SDL_RWFromMem(audio_buffer,audio_buffer_length),1);
-
-    // SDL_Thread *network_thread = SDL_CreateThread(network_thread_fn, NULL, NULL);
     GStreamerThreadArgs gstreamer_args{&argc, &argv};
     SDL_Thread *gstreamer_thread = SDL_CreateThread(gstreamer_thread_fn, NULL, &gstreamer_args);
-    logger.debug("lancement du thread");
     SDL_Thread *gstreamer_thread_audio = SDL_CreateThread(gstreamer_thread_audio_fn, NULL, &gstreamer_args);
     SDL_Event event;
     bool isPlaying = true;
-    auto rop = SDL_RWFromFile(configuration["audio_file_path"].c_str(), "rb");//SDL_RWFromMem(audio_buffer,audio_buffer_length);
-    std::cout<<rop<<std::endl;
-    mmusic = Mix_LoadWAV_RW(rop,1);
-    std::cout<<mmusic<<std::endl;
-    logger.debug("lancement du thread");
-    Mix_PlayChannel(-1, mmusic, 0);
+    
 
     while (true)
     {
