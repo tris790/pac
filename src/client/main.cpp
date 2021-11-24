@@ -25,11 +25,10 @@
 // was needed because SDL was redeclaring main on something like that
 #undef main
 
-auto stream_audio_enable = std::strcmp(configuration["stream_audio"].c_str(), "true") == 0;
+Config configuration;
 
 // IYUV, RGB888, RGBx, NV12
 const int pixel_format = SDL_PIXELFORMAT_IYUV;
-Config configuration;
 SDL_Renderer *sdlRenderer;
 int screen_buffer_w = 0;
 int screen_buffer_h = 0;
@@ -254,13 +253,13 @@ int main(int argc, char *argv[])
 {
     logger.info("Initializing the client");
 
-    configuration = Config(get_exec_directory(argv[0]) + "/client.conf");
+    configuration = Config(get_exec_directory(argv[0]) + "client.conf");
     int window_width = stoi(configuration["window_width"]);
     int window_heigth = stoi(configuration["window_heigth"]);
 
-    auto steam_audio_enable = std::strcmp(configuration["stream_audio"].c_str(), "true") == 0;
+    auto stream_audio_enable = std::strcmp(configuration["stream_audio"].c_str(), "true") == 0;
 
-    if (steam_audio_enable
+    if (stream_audio_enable
             ? SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)
             : SDL_Init(SDL_INIT_VIDEO))
     {

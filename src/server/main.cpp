@@ -25,7 +25,7 @@ Config configuration;
 int main(int argc, char *argv[])
 {
     logger.info("Initializing the server");
-    configuration = Config(get_exec_directory(argv[0]) + "/server.conf");
+    configuration = Config(get_exec_directory(argv[0]) + "server.conf");
 
     std::string hostname(configuration["hostname"]);
     auto receive_port = stoi(configuration["receive_port"]);
