@@ -7,6 +7,8 @@
 class Config
 {
 public:
+	Config() {}
+
 	Config(std::string filename)
 	{
 		// std::fstream::in (read-only access)
