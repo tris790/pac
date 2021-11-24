@@ -52,24 +52,16 @@ GstBus *bus;
 // Multithread problem ?
 int thread_exit = 0;
 
-uvgrtp::media_stream *init_network_connection()
+uvgrtp::media_stream *init_network_connection(uvgrtp::context *ctx)
 {
-    thread_exit = 0;
-    uvgrtp::context ctx;
-    std::string server_hostname("127.0.0.1");
+    std::string hostname(configuration["hostname"]);
     auto receive_port = stoi(configuration["receive_port"]);
     auto send_port = stoi(configuration["send_port"]);
-    uvgrtp::session *session = ctx.create_session(server_hostname);
-    uvgrtp::media_stream *rtp_stream = nullptr;
 
-    logger.debug("Connecting to %s:%d", server_hostname.c_str(), receive_port);
-
-    // Retry to connect every second if connection failed
-    while ((rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC)) == nullptr)
-    {
-        logger.error("Failed to created a socket %s", server_hostname.c_str());
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    }
+    logger.debug("Connecting to %s:%d", hostname.c_str(), receive_port);
+    // UVGRTP Setup
+    uvgrtp::session *session = ctx->create_session(hostname);
+    uvgrtp::media_stream *rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC);
 
     return rtp_stream;
 }
@@ -78,8 +70,8 @@ void send_input_network(uvgrtp::media_stream &rtp_stream, SDL_Event &event)
 {
     // SOCKET
     NetworkPacket input_network_packet = {
-        NETWORK_PACKET_TYPE::INPUT, // packet_type
-        NULL                        // data
+        NETWORK_PACKET_TYPE::REMOTE_INPUT, // packet_type
+        NULL                               // data
     };
 
     memcpy(input_network_packet.data, &event, sizeof(SDL_Event));
@@ -88,50 +80,6 @@ void send_input_network(uvgrtp::media_stream &rtp_stream, SDL_Event &event)
 
     auto input_send = (SDL_Event &)input_network_packet.data;
     logger.debug("[Now] Send input type %d", input_send.type);
-}
-
-int network_thread_fn(void *opaque)
-{
-    uvgrtp::context ctx;
-    std::string server_hostname(configuration["hostname"]);
-    auto receive_port = stoi(configuration["receive_port"]);
-    auto send_port = stoi(configuration["send_port"]);
-    uvgrtp::session *session = ctx.create_session(server_hostname);
-    uvgrtp::media_stream *rtp_stream = nullptr;
-
-    logger.debug("Connecting to %s:%d", server_hostname.c_str(), receive_port);
-
-    // Retry to connect every second if connection failed
-    while ((rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC)) == nullptr)
-    {
-        logger.error("Failed to created a socket %s", server_hostname.c_str());
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    }
-
-    logger.debug("Succesfully created a socket %s", server_hostname.c_str());
-
-    while (!thread_exit)
-    {
-        uvgrtp::frame::rtp_frame *video_network_frame = rtp_stream->pull_frame(5);
-        if (video_network_frame)
-        {
-            auto packet = video_network_frame->payload;
-            auto packet_size = video_network_frame->payload_len;
-            logger.debug("Client size: %lld", packet_size);
-        }
-        uvgrtp::frame::dealloc_frame(video_network_frame);
-
-        SDL_Event event;
-        event.type = REFRESH_EVENT;
-        SDL_PushEvent(&event);
-    }
-
-    ctx.destroy_session(session);
-
-    SDL_Event event;
-    event.type = BREAK_EVENT;
-    SDL_PushEvent(&event);
-    return 0;
 }
 
 typedef struct
@@ -297,6 +245,8 @@ int main(int argc, char *argv[])
     int window_heigth = stoi(configuration["window_heigth"]);
 
     auto stream_audio_enable = std::strcmp(configuration["stream_audio"].c_str(), "true") == 0;
+    uvgrtp::context ctx;
+    auto rt = init_network_connection(&ctx);
 
     if (stream_audio_enable
             ? SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)
@@ -333,8 +283,6 @@ int main(int argc, char *argv[])
     SDL_Event event;
     bool isPlaying = true;
 
-    auto rt = init_network_connection();
-    
     while (true)
     {
         // Wait

@@ -4,7 +4,7 @@ const size_t MAX_DATAFRAME_LEN = 1024; // 1518 default max linux;
 
 enum NETWORK_PACKET_TYPE
 {
-    INPUT
+    REMOTE_INPUT
 };
 
 typedef struct _NetworkPacket
