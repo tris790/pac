@@ -19,16 +19,14 @@
 #include "pac_network.h"
 #include "config.h"
 #include "logger.h"
-
-Config configuration = Config("client.conf");
+#include "io_utils.h"
 
 // was needed because SDL was redeclaring main on something like that
 #undef main
 
 // IYUV, RGB888, RGBx, NV12
 const int pixel_format = SDL_PIXELFORMAT_IYUV;
-int window_width = stoi(configuration["window_width"]);
-int window_heigth = stoi(configuration["window_heigth"]);
+Config configuration;
 SDL_Renderer *sdlRenderer;
 int screen_buffer_w = 0;
 int screen_buffer_h = 0;
@@ -201,6 +199,10 @@ int gstreamer_thread_fn(void *opaque)
 int main(int argc, char *argv[])
 {
     logger.info("Initializing the client");
+
+    configuration = Config(get_exec_directory(argv[0]) + "/client.conf");
+    int window_width = stoi(configuration["window_width"]);
+    int window_heigth = stoi(configuration["window_heigth"]);
 
     auto steam_audio_enable = std::strcmp(configuration["stream_audio"].c_str(), "true") == 0;
 
