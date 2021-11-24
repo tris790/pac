@@ -46,7 +46,7 @@ GstBus *bus;
 // Multithread problem ?
 int thread_exit = 0;
 
-uvgrtp::media_stream *initPo()
+uvgrtp::media_stream *init_network_connection()
 {
     thread_exit = 0;
     uvgrtp::context ctx;
@@ -76,18 +76,12 @@ void send_input_network(uvgrtp::media_stream &rtp_stream, SDL_Event &event)
         NULL                        // data
     };
 
-    int byte_size_to_send = sizeof(SDL_Event);
-
-    // auto po = (SDL_Event &)packet;
-    // SDL_EventType event_type = (SDL_EventType)event.type;
-    // logger.debug("AH oui %d", event_type);
-
-    memcpy(input_network_packet.data, &event, byte_size_to_send);
-
-    auto po = (SDL_Event &)input_network_packet.data;
-    logger.debug("Send input type %d", po.type);
+    memcpy(input_network_packet.data, &event, sizeof(SDL_Event));
 
     rtp_stream.push_frame((uint8_t *)&input_network_packet, sizeof(NetworkPacket), RTP_NO_FLAGS);
+
+    auto input_send = (SDL_Event &)input_network_packet.data;
+    logger.debug("[Now] Send input type %d", input_send.type);
 }
 
 int network_thread_fn(void *opaque)
@@ -308,15 +302,13 @@ int main(int argc, char *argv[])
     sdlTexture = SDL_CreateTexture(sdlRenderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, screen_buffer_w, screen_buffer_h);
     SDL_Rect sdlRect;
 
-    // SDL_Thread *network_thread = SDL_CreateThread(network_thread_fn, NULL, NULL);
-
     GStreamerThreadArgs gstreamer_args{&argc, &argv};
     SDL_Thread *gstreamer_thread = SDL_CreateThread(gstreamer_thread_fn, NULL, &gstreamer_args);
     SDL_Event event;
     bool isPlaying = true;
 
-    auto rt = initPo();
-
+    auto rt = init_network_connection();
+    
     while (true)
     {
         // Wait
@@ -342,7 +334,6 @@ int main(int argc, char *argv[])
         }
         else if (event.type == SDL_KEYDOWN)
         {
-
             if (event.key.keysym.sym == SDLK_ESCAPE)
             {
                 SDL_Event event;

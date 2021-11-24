@@ -56,8 +56,6 @@ int network_thread_fn(void *rtp_stream_arg)
 
 int main(int argc, char *argv[])
 {
-    logger.info("Initializing the server");
-
     ////////////
     // for (int i = 0; i < 20; i++)
     // {
