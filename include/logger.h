@@ -2,6 +2,7 @@
 #include <chrono>
 #include <fstream>
 #include <iomanip>
+#include <sstream>
 
 // Time format
 #define LOGGER_PRETTY_TIME_FORMAT "%Y-%m-%d %H:%M:%S"

@@ -15,6 +15,7 @@
 #include <gst/app/gstappsrc.h>
 #include <gst/app/gstappsink.h>
 #include <gst/video/video-info.h>
+#include <gst/audio/audio-info.h>
 
 #include "pac_network.h"
 #include "config.h"
@@ -24,17 +25,22 @@
 // was needed because SDL was redeclaring main on something like that
 #undef main
 
+Config configuration;
+
 // IYUV, RGB888, RGBx, NV12
 const int pixel_format = SDL_PIXELFORMAT_IYUV;
-Config configuration;
 SDL_Renderer *sdlRenderer;
 int screen_buffer_w = 0;
 int screen_buffer_h = 0;
 SDL_Texture *sdlTexture;
+Mix_Chunk *mmusic;
 unsigned char *screen_buffer;
+unsigned char *audio_buffer;
+int audio_buffer_length;
 
 // !threadsafe
 GstElement *pipeline;
+GstElement *pipeline_audio;
 GstBus *bus;
 
 //Refresh Event
@@ -142,6 +148,53 @@ GstFlowReturn frame_recorded_callback(GstAppSink *appsink, void *customData)
     return GST_FLOW_OK;
 }
 
+int gstreamer_thread_audio_fn(void *opaque)
+{
+    GStreamerThreadArgs *args = (GStreamerThreadArgs *)opaque;
+    gst_init(args->argc, args->argv);
+    auto pipeline_args = configuration["gst_audio_receiver"];
+    logger.debug("pipeline is : %s", pipeline_args.c_str());
+    pipeline_audio = gst_parse_launch(pipeline_args.c_str(), NULL);
+
+    gst_element_set_state(pipeline_audio, GST_STATE_PLAYING);
+
+    bus = gst_element_get_bus(pipeline_audio);
+    GstMessage *msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
+                                                 (GstMessageType)(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
+
+    switch (GST_MESSAGE_TYPE(msg))
+    {
+    case GST_MESSAGE_ERROR:
+    {
+        GError *err;
+        gchar *debug;
+
+        gst_message_parse_error(msg, &err, &debug);
+        g_print("Error: %s\n", err->message);
+        g_error_free(err);
+        g_free(debug);
+
+        break;
+    }
+    case GST_MESSAGE_EOS:
+        /* end-of-stream */
+        break;
+    default:
+        /* unhandled message */
+        break;
+    }
+
+    if (msg != NULL)
+        gst_message_unref(msg);
+    gst_object_unref(bus);
+    gst_element_set_state(pipeline_audio, GST_STATE_NULL);
+    gst_object_unref(pipeline_audio);
+
+    printf("Closing Gstreamer audio thread\n");
+
+    return 0;
+}
+
 int gstreamer_thread_fn(void *opaque)
 {
     GStreamerThreadArgs *args = (GStreamerThreadArgs *)opaque;
@@ -200,13 +253,13 @@ int main(int argc, char *argv[])
 {
     logger.info("Initializing the client");
 
-    configuration = Config(get_exec_directory(argv[0]) + "/client.conf");
+    configuration = Config(get_exec_directory(argv[0]) + "client.conf");
     int window_width = stoi(configuration["window_width"]);
     int window_heigth = stoi(configuration["window_heigth"]);
 
-    auto steam_audio_enable = std::strcmp(configuration["stream_audio"].c_str(), "true") == 0;
+    auto stream_audio_enable = std::strcmp(configuration["stream_audio"].c_str(), "true") == 0;
 
-    if (steam_audio_enable
+    if (stream_audio_enable
             ? SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)
             : SDL_Init(SDL_INIT_VIDEO))
     {
@@ -231,41 +284,13 @@ int main(int argc, char *argv[])
 
     sdlRenderer = SDL_CreateRenderer(screen, -1, 0);
 
-    if (steam_audio_enable)
-    {
-        // Initialisation mixer
-        int audiomixer = Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 512);
-        if (audiomixer < 0)
-        {
-            logger.error("Unable to open audio: %s", SDL_GetError());
-            exit(-1);
-        }
-
-        audiomixer = Mix_AllocateChannels(4);
-        if (audiomixer < 0)
-        {
-            logger.error("Unable to allocate mixing channels: %s", SDL_GetError());
-            exit(-1);
-        }
-
-        Mix_Chunk *mmusic;
-        std::string path = configuration["audio_file_path"];
-        mmusic = Mix_LoadWAV(path.c_str());
-        if (mmusic == NULL)
-        {
-            logger.error("Unable to load wave file: %s", path.c_str());
-        }
-
-        // Lance la musique depuis le début du fichier
-        Mix_PlayChannel(stoi(configuration["channel"]), mmusic, stoi(configuration["loop"]));
-    }
-
     sdlTexture = SDL_CreateTexture(sdlRenderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, screen_buffer_w, screen_buffer_h);
     SDL_Rect sdlRect;
 
-    // SDL_Thread *network_thread = SDL_CreateThread(network_thread_fn, NULL, NULL);
     GStreamerThreadArgs gstreamer_args{&argc, &argv};
     SDL_Thread *gstreamer_thread = SDL_CreateThread(gstreamer_thread_fn, NULL, &gstreamer_args);
+    if (stream_audio_enable)
+        SDL_Thread *gstreamer_thread_audio = SDL_CreateThread(gstreamer_thread_audio_fn, NULL, &gstreamer_args);
     SDL_Event event;
     bool isPlaying = true;
 
@@ -319,6 +344,11 @@ int main(int argc, char *argv[])
             thread_exit = 1;
             gst_element_set_state(pipeline, GST_STATE_NULL);
             gst_element_send_event(pipeline, gst_event_new_eos());
+            if (stream_audio_enable)
+            {
+                gst_element_set_state(pipeline_audio, GST_STATE_NULL);
+                gst_element_send_event(pipeline_audio, gst_event_new_eos());
+            }
             break;
         }
     }
