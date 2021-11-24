@@ -34,6 +34,7 @@ int screen_buffer_w = 0;
 int screen_buffer_h = 0;
 SDL_Texture *sdlTexture;
 unsigned char *screen_buffer;
+unsigned char buffer[200];
 
 // !threadsafe
 GstElement *pipeline;
@@ -46,6 +47,44 @@ GstBus *bus;
 
 // Multithread problem ?
 int thread_exit = 0;
+
+uvgrtp::media_stream *initPo()
+{
+    thread_exit = 0;
+    uvgrtp::context ctx;
+    std::string server_hostname("127.0.0.1");
+    auto receive_port = stoi(configuration["receive_port"]);
+    auto send_port = stoi(configuration["send_port"]);
+    uvgrtp::session *session = ctx.create_session(server_hostname);
+    uvgrtp::media_stream *rtp_stream = nullptr;
+
+    logger.debug("Connecting to %s:%d", server_hostname.c_str(), receive_port);
+
+    // Retry to connect every second if connection failed
+    while ((rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC)) == nullptr)
+    {
+        logger.error("Failed to created a socket %s", server_hostname.c_str());
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    }
+
+    return rtp_stream;
+}
+
+void po(uvgrtp::media_stream &rtp_stream, SDL_Event &event)
+{
+    // SOCKET
+    NetworkPacket input_network_packet = {
+        NETWORK_PACKET_TYPE::INPUT, // packet_type
+        0,                          // buffer_offset
+        NULL                        // data
+    };
+
+    int byte_size_to_send = sizeof(event);
+
+    memcpy(input_network_packet.data, &event, byte_size_to_send);
+
+    rtp_stream.push_frame((uint8_t *)&input_network_packet, sizeof(NetworkPacket), RTP_NO_FLAGS);
+}
 
 int network_thread_fn(void *opaque)
 {
@@ -262,10 +301,13 @@ int main(int argc, char *argv[])
     SDL_Rect sdlRect;
 
     // SDL_Thread *network_thread = SDL_CreateThread(network_thread_fn, NULL, NULL);
+
     GStreamerThreadArgs gstreamer_args{&argc, &argv};
     SDL_Thread *gstreamer_thread = SDL_CreateThread(gstreamer_thread_fn, NULL, &gstreamer_args);
     SDL_Event event;
     bool isPlaying = true;
+
+    auto rt = initPo();
 
     while (true)
     {
@@ -290,6 +332,8 @@ int main(int argc, char *argv[])
         }
         else if (event.type == SDL_KEYDOWN)
         {
+            po(*rt, event);
+
             logger.debug("SDL_Event: We got a key down event (SDL_KEYDOWN)");
 
             if (event.key.keysym.sym == SDLK_ESCAPE)
