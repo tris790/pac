@@ -11,6 +11,6 @@ std::string get_exec_directory(char *current_path)
 #else
     auto last_slash_index = current_path_string.find_last_of("/");
 #endif
-    return current_path_string.substr(0, last_slash_index > 1 ? last_slash_index : 0);
+    return current_path_string.substr(0, last_slash_index > 1 ? last_slash_index + 1 : 0);
 }
 #endif
