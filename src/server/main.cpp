@@ -12,13 +12,14 @@
 #include <unistd.h>
 #include <SDL.h>
 #include <SDL_events.h>
-
+#include <SDL_keycode.h>
 #include "pac_network.h"
 #include "config.h"
-#include "input_emulator.h"
 #include "logger.h"
+#include "input_emulator.h"
+#include "io_utils.h"
 
-Config configuration = Config("server.conf");
+Config configuration;
 
 #define GSTREAMER_CAPTURE 1
 
@@ -71,6 +72,9 @@ int main(int argc, char *argv[])
     // }
     // return 0;
     ////////////
+
+    logger.info("Initializing the server");
+    configuration = Config(get_exec_directory(argv[0]) + "/server.conf");
 
     std::string hostname(configuration["hostname"]);
     auto receive_port = stoi(configuration["receive_port"]);
