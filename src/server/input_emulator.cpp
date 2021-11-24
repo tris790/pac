@@ -57,7 +57,7 @@ void InputEmulator::emulate_mouse_movement(int mouse_x, int mouse_y)
 
 void InputEmulator::emulate_keyboard_key(Uint8 key)
 {
-    logger::warning("Not Implemented");
+    logger.warning("Not Implemented");
 }
 
 void InputEmulator::emulate_mouse_click(Uint8 button, bool pressed)
