@@ -68,18 +68,24 @@ uvgrtp::media_stream *initPo()
     return rtp_stream;
 }
 
-void po(uvgrtp::media_stream &rtp_stream, SDL_Event &event)
+void send_input_network(uvgrtp::media_stream &rtp_stream, SDL_Event &event)
 {
     // SOCKET
     NetworkPacket input_network_packet = {
         NETWORK_PACKET_TYPE::INPUT, // packet_type
-        0,                          // buffer_offset
         NULL                        // data
     };
 
-    int byte_size_to_send = sizeof(event);
+    int byte_size_to_send = sizeof(SDL_Event);
+
+    // auto po = (SDL_Event &)packet;
+    // SDL_EventType event_type = (SDL_EventType)event.type;
+    // logger.debug("AH oui %d", event_type);
 
     memcpy(input_network_packet.data, &event, byte_size_to_send);
+
+    auto po = (SDL_Event &)input_network_packet.data;
+    logger.debug("Send input type %d", po.type);
 
     rtp_stream.push_frame((uint8_t *)&input_network_packet, sizeof(NetworkPacket), RTP_NO_FLAGS);
 }
@@ -239,7 +245,7 @@ int main(int argc, char *argv[])
 {
     logger.info("Initializing the client");
 
-    configuration = Config(get_exec_directory(argv[0]) + "/client.conf");
+    configuration = Config(get_exec_directory(argv[0]) + "client.conf");
     int window_width = stoi(configuration["window_width"]);
     int window_heigth = stoi(configuration["window_heigth"]);
 
@@ -313,8 +319,10 @@ int main(int argc, char *argv[])
 
     while (true)
     {
-        //Wait
+        // Wait
         SDL_WaitEvent(&event);
+        auto is_network_input = (SDL_KEYDOWN | SDL_KEYUP | SDL_MOUSEMOTION | SDL_MOUSEBUTTONDOWN | SDL_MOUSEBUTTONUP | SDL_MOUSEWHEEL) & event.type;
+
         if (event.type == REFRESH_EVENT && isPlaying)
         {
             if (SDL_UpdateTexture(sdlTexture, NULL, screen_buffer, screen_buffer_w))
@@ -334,9 +342,6 @@ int main(int argc, char *argv[])
         }
         else if (event.type == SDL_KEYDOWN)
         {
-            po(*rt, event);
-
-            logger.debug("SDL_Event: We got a key down event (SDL_KEYDOWN)");
 
             if (event.key.keysym.sym == SDLK_ESCAPE)
             {
@@ -364,6 +369,11 @@ int main(int argc, char *argv[])
             gst_element_set_state(pipeline, GST_STATE_NULL);
             gst_element_send_event(pipeline, gst_event_new_eos());
             break;
+        }
+        else if (is_network_input)
+        {
+            send_input_network(*rt, event);
+            logger.debug("SDL_Event: We got a key down event (SDL_KEYDOWN)");
         }
     }
     SDL_Quit();

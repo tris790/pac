@@ -40,11 +40,11 @@ int network_thread_fn(void *rtp_stream_arg)
             // If received input
             if (input_packet->packet_type == NETWORK_PACKET_TYPE::INPUT)
             {
-                logger.debug("Server input received");
+                auto po = (SDL_Event &)input_packet->data;
 
-                auto packet = input_packet->data;
+                logger.debug("Recv input type %d", po.type);
 
-                // Call trist code input
+                InputEmulator::handle_sdl_event(po);
             }
         }
 
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
     ////////////
 
     logger.info("Initializing the server");
-    configuration = Config(get_exec_directory(argv[0]) + "/server.conf");
+    configuration = Config(get_exec_directory(argv[0]) + "server.conf");
 
     std::string hostname(configuration["hostname"]);
     auto receive_port = stoi(configuration["receive_port"]);
