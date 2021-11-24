@@ -26,6 +26,8 @@ Config configuration = Config("client.conf");
 // was needed because SDL was redeclaring main on something like that
 #undef main
 
+auto stream_audio_enable = std::strcmp(configuration["stream_audio"].c_str(), "true") == 0;
+
 // IYUV, RGB888, RGBx, NV12
 const int pixel_format = SDL_PIXELFORMAT_IYUV;
 int window_width = stoi(configuration["window_width"]);
@@ -153,14 +155,12 @@ int gstreamer_thread_audio_fn(void *opaque)
 {
     GStreamerThreadArgs *args = (GStreamerThreadArgs *)opaque;
     gst_init(args->argc, args->argv);
-    logger.debug("lecture du pipeline");
     auto pipeline_args = configuration["gst_audio_receiver"];
     logger.debug("pipeline is : %s", pipeline_args.c_str());
     pipeline_audio = gst_parse_launch(pipeline_args.c_str(), NULL);
 
     gst_element_set_state(pipeline_audio, GST_STATE_PLAYING);
 
-    logger.debug("bus");
     bus = gst_element_get_bus(pipeline_audio);
     GstMessage *msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
                                                  (GstMessageType)(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
@@ -288,10 +288,10 @@ int main(int argc, char *argv[])
 
     GStreamerThreadArgs gstreamer_args{&argc, &argv};
     SDL_Thread *gstreamer_thread = SDL_CreateThread(gstreamer_thread_fn, NULL, &gstreamer_args);
-    SDL_Thread *gstreamer_thread_audio = SDL_CreateThread(gstreamer_thread_audio_fn, NULL, &gstreamer_args);
+    if (stream_audio_enable)
+        SDL_Thread *gstreamer_thread_audio = SDL_CreateThread(gstreamer_thread_audio_fn, NULL, &gstreamer_args);
     SDL_Event event;
     bool isPlaying = true;
-    
 
     while (true)
     {
@@ -343,8 +343,11 @@ int main(int argc, char *argv[])
             thread_exit = 1;
             gst_element_set_state(pipeline, GST_STATE_NULL);
             gst_element_send_event(pipeline, gst_event_new_eos());
-            gst_element_set_state(pipeline_audio, GST_STATE_NULL);
-            gst_element_send_event(pipeline_audio, gst_event_new_eos());
+            if (stream_audio_enable)
+            {
+                gst_element_set_state(pipeline_audio, GST_STATE_NULL);
+                gst_element_send_event(pipeline_audio, gst_event_new_eos());
+            }
             break;
         }
     }
