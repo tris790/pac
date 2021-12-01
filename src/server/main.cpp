@@ -74,8 +74,6 @@ int main(int argc, char *argv[])
 
     SDL_Thread *network_thread = SDL_CreateThread(network_thread_fn, NULL, rtp_stream);
 
-    uvgrtp::frame::rtp_frame *data = rtp_stream->pull_frame();
-
     // Gstreamer Setup
     gst_init(&argc, &argv);
 #if GSTREAMER_CAPTURE

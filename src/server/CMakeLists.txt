@@ -34,6 +34,15 @@ endif()
 
 target_link_libraries(${APP_NAME} PUBLIC gstreamer-1.0 glib-2.0 gstapp-1.0 gobject-2.0)
 
+# Copying DLLS
+if(WIN32)
+    message(STATUS "Copying DLLS...")
+    add_custom_command(TARGET ${APP_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:SDL2>
+            $<TARGET_FILE_DIR:${APP_NAME}>)
+endif()
+
 # Copying config
 message(STATUS "Copying config...")
 add_custom_command(TARGET ${APP_NAME} POST_BUILD

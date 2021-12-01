@@ -79,8 +79,6 @@ void send_input_network(uvgrtp::media_stream &rtp_stream, SDL_Event &event)
     rtp_stream.push_frame((uint8_t *)&input_network_packet, sizeof(NetworkPacket), RTP_NO_FLAGS);
 
     auto input_send = (SDL_Event &)input_network_packet.data;
-
-    logger.debug("[Now] Send input type %d", input_send.type);
 }
 
 typedef struct
@@ -309,7 +307,6 @@ int main(int argc, char *argv[])
         }
         else if (is_network_input)
         {
-            logger.debug("SDL_Event: We got a key down event (SDL_KEYDOWN)");
             send_input_network(*rt, event);
         }
         else if (event.type == SDL_WINDOWEVENT)
