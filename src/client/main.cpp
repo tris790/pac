@@ -307,20 +307,10 @@ int main(int argc, char *argv[])
             SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, &sdlRect);
             SDL_RenderPresent(sdlRenderer);
         }
-        else if (event.type == SDL_KEYDOWN)
+        else if (is_network_input)
         {
-            if (event.key.keysym.sym == SDLK_ESCAPE)
-            {
-                SDL_Event event;
-                event.type = SDL_QUIT;
-                SDL_PushEvent(&event);
-            }
-            else if (event.key.keysym.sym == SDLK_SPACE)
-            {
-                isPlaying = !isPlaying;
-
-                logger.debug("Reporting playback state %s", (isPlaying) ? "played" : "paused");
-            }
+            logger.debug("SDL_Event: We got a key down event (SDL_KEYDOWN)");
+            send_input_network(*rt, event);
         }
         else if (event.type == SDL_WINDOWEVENT)
         {
@@ -340,11 +330,6 @@ int main(int argc, char *argv[])
                 gst_element_send_event(pipeline_audio, gst_event_new_eos());
             }
             break;
-        }
-        else if (is_network_input)
-        {
-            send_input_network(*rt, event);
-            logger.debug("SDL_Event: We got a key down event (SDL_KEYDOWN)");
         }
     }
     SDL_Quit();
