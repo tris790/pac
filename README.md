@@ -1,3 +1,39 @@
+---
+id: "custom"
+---
+
+<!-- @import "note-style.less" -->
+
+<!-- https://detexify.kirelabs.org/classify.html -->
+<!-- https://shd101wyy.github.io/markdown-preview-enhanced/#/ -->
+
+<link href="https://fonts.googleapis.com/css2?family=Handlee&display=swap" rel="stylesheet">
+
+<!--
+
+<table>
+  <tr>
+    <th></th>
+    <th></th>
+  </tr>
+  <tr>
+    <td></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
+
+<table>
+  <td></td>
+  <td></td>
+</table>
+
+
+-->
+
 # PAC - Portals Across Computers
 <p align="center"><a href="https://vuejs.org" target="_blank" rel="noopener noreferrer"><img width="100" src="assets/tupac3.png" alt="Pac logo"></a></p>
 
@@ -7,14 +43,22 @@
 - g++ or Visual Studio 2019
 
 ## Dependencies
+###### Windows & Linux
 - Downloaded, built, linked by CMake, view dependencies/CMakeLists.txt
 - Gstreamer dev + runtime (gstreamer-good, gstreamer-bad)
 
-## Building
-### Client and Server
-**cd build**
+###### Linux
+- libxtst
+- libxtst-dev
 
-### Debug
+## Building
+
+### Client and Server
+```shell
+cd build
+```
+
+#### Debug
 ###### Windows
 
 
@@ -26,7 +70,7 @@ cmake -G "Visual Studio 16 2019" -A x64 -S ../ -B "build64"
 cmake --build "build64" --config Debug
 ```
 
-###### Linux:
+###### Linux
 
 ```shell
 cmake -G "Ninja" -S ../ -B "build64/Debug" -D CMAKE_BUILD_TYPE=Debug
@@ -38,7 +82,7 @@ cmake --build "build64/Debug"
 
 <br>
 
-### Release
+#### Release
 ###### Windows
 
 
