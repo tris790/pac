@@ -91,13 +91,6 @@ int main(int argc, char *argv[])
 
     uvgrtp::frame::rtp_frame *data = rtp_stream->pull_frame();
 
-    if (data)
-    {
-        //auto packet = data->payload;
-        //auto packet_size = data->payload_len;
-        //logger.debug("Client size: %lld", packet_size);
-    }
-
     // Gstreamer Setup
     gst_init(&argc, &argv);
 #if GSTREAMER_CAPTURE

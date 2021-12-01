@@ -35,7 +35,6 @@ int screen_buffer_h = 0;
 SDL_Texture *sdlTexture;
 Mix_Chunk *mmusic;
 unsigned char *screen_buffer;
-unsigned char buffer[200];
 unsigned char *audio_buffer;
 int audio_buffer_length;
 
@@ -59,6 +58,7 @@ uvgrtp::media_stream *init_network_connection(uvgrtp::context *ctx)
     auto send_port = stoi(configuration["send_port"]);
 
     logger.debug("Connecting to %s:%d", hostname.c_str(), receive_port);
+
     // UVGRTP Setup
     uvgrtp::session *session = ctx->create_session(hostname);
     uvgrtp::media_stream *rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC);
@@ -79,6 +79,7 @@ void send_input_network(uvgrtp::media_stream &rtp_stream, SDL_Event &event)
     rtp_stream.push_frame((uint8_t *)&input_network_packet, sizeof(NetworkPacket), RTP_NO_FLAGS);
 
     auto input_send = (SDL_Event &)input_network_packet.data;
+
     logger.debug("[Now] Send input type %d", input_send.type);
 }
 
@@ -282,6 +283,8 @@ int main(int argc, char *argv[])
         SDL_Thread *gstreamer_thread_audio = SDL_CreateThread(gstreamer_thread_audio_fn, NULL, &gstreamer_args);
     SDL_Event event;
     bool isPlaying = true;
+
+    auto rt = init_network_connection();
 
     while (true)
     {
