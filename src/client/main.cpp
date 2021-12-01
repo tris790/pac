@@ -51,48 +51,34 @@ GstBus *bus;
 // Multithread problem ?
 int thread_exit = 0;
 
-int network_thread_fn(void *opaque)
+uvgrtp::media_stream *init_network_connection(uvgrtp::context *ctx)
 {
-    uvgrtp::context ctx;
-    std::string server_hostname(configuration["hostname"]);
+    std::string hostname(configuration["hostname"]);
     auto receive_port = stoi(configuration["receive_port"]);
     auto send_port = stoi(configuration["send_port"]);
-    uvgrtp::session *session = ctx.create_session(server_hostname);
-    uvgrtp::media_stream *rtp_stream = nullptr;
 
-    logger.debug("Connecting to %s:%d", server_hostname.c_str(), receive_port);
+    logger.debug("Connecting to %s:%d", hostname.c_str(), receive_port);
 
-    // Retry to connect every second if connection failed
-    while ((rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC)) == nullptr)
-    {
-        logger.error("Failed to created a socket %s", server_hostname.c_str());
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    }
+    // UVGRTP Setup
+    uvgrtp::session *session = ctx->create_session(hostname);
+    uvgrtp::media_stream *rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC);
 
-    logger.debug("Succesfully created a socket %s", server_hostname.c_str());
+    return rtp_stream;
+}
 
-    while (!thread_exit)
-    {
-        uvgrtp::frame::rtp_frame *video_network_frame = rtp_stream->pull_frame(5);
-        if (video_network_frame)
-        {
-            auto packet = video_network_frame->payload;
-            auto packet_size = video_network_frame->payload_len;
-            logger.debug("Client size: %lld", packet_size);
-        }
-        uvgrtp::frame::dealloc_frame(video_network_frame);
+void send_input_network(uvgrtp::media_stream &rtp_stream, SDL_Event &event)
+{
+    // SOCKET
+    NetworkPacket input_network_packet = {
+        NETWORK_PACKET_TYPE::REMOTE_INPUT, // packet_type
+        NULL                               // data
+    };
 
-        SDL_Event event;
-        event.type = REFRESH_EVENT;
-        SDL_PushEvent(&event);
-    }
+    memcpy(input_network_packet.data, &event, sizeof(SDL_Event));
 
-    ctx.destroy_session(session);
+    rtp_stream.push_frame((uint8_t *)&input_network_packet, sizeof(NetworkPacket), RTP_NO_FLAGS);
 
-    SDL_Event event;
-    event.type = BREAK_EVENT;
-    SDL_PushEvent(&event);
-    return 0;
+    auto input_send = (SDL_Event &)input_network_packet.data;
 }
 
 typedef struct
@@ -258,6 +244,8 @@ int main(int argc, char *argv[])
     int window_heigth = stoi(configuration["window_heigth"]);
 
     auto stream_audio_enable = std::strcmp(configuration["stream_audio"].c_str(), "true") == 0;
+    uvgrtp::context ctx;
+    auto rt = init_network_connection(&ctx);
 
     if (stream_audio_enable
             ? SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)
@@ -296,8 +284,10 @@ int main(int argc, char *argv[])
 
     while (true)
     {
-        //Wait
+        // Wait
         SDL_WaitEvent(&event);
+        auto is_network_input = (SDL_KEYDOWN | SDL_KEYUP | SDL_MOUSEMOTION | SDL_MOUSEBUTTONDOWN | SDL_MOUSEBUTTONUP | SDL_MOUSEWHEEL) & event.type;
+
         if (event.type == REFRESH_EVENT && isPlaying)
         {
             if (SDL_UpdateTexture(sdlTexture, NULL, screen_buffer, screen_buffer_w))
@@ -315,22 +305,9 @@ int main(int argc, char *argv[])
             SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, &sdlRect);
             SDL_RenderPresent(sdlRenderer);
         }
-        else if (event.type == SDL_KEYDOWN)
+        else if (is_network_input)
         {
-            logger.debug("SDL_Event: We got a key down event (SDL_KEYDOWN)");
-
-            if (event.key.keysym.sym == SDLK_ESCAPE)
-            {
-                SDL_Event event;
-                event.type = SDL_QUIT;
-                SDL_PushEvent(&event);
-            }
-            else if (event.key.keysym.sym == SDLK_SPACE)
-            {
-                isPlaying = !isPlaying;
-
-                logger.debug("Reporting playback state %s", (isPlaying) ? "played" : "paused");
-            }
+            send_input_network(*rt, event);
         }
         else if (event.type == SDL_WINDOWEVENT)
         {

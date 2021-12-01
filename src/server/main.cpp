@@ -9,7 +9,10 @@
 #include <vector>
 #include <string.h>
 #include <assert.h>
-
+#ifndef _WIN32
+#include <unistd.h>
+#endif
+#include <SDL.h>
 #include <SDL_events.h>
 #include <SDL_keycode.h>
 #include "pac_network.h"
@@ -18,9 +21,42 @@
 #include "input_emulator.h"
 #include "io_utils.h"
 
+#undef main
+
 Config configuration;
 
 #define GSTREAMER_CAPTURE 1
+
+int thread_exit = 0;
+
+int network_thread_fn(void *rtp_stream_arg)
+{
+    auto rtp_stream = (uvgrtp::media_stream *)rtp_stream_arg;
+
+    while (!thread_exit)
+    {
+        uvgrtp::frame::rtp_frame *input_network_frame = rtp_stream->pull_frame(5);
+
+        if (input_network_frame)
+        {
+            auto input_packet = (NetworkPacket *)input_network_frame->payload;
+
+            // If received input
+            if (input_packet->packet_type == NETWORK_PACKET_TYPE::REMOTE_INPUT)
+            {
+                auto input_received = (SDL_Event &)input_packet->data;
+
+                logger.debug("Recv input type %d", input_received.type);
+
+                InputEmulator::handle_sdl_event(input_received);
+            }
+        }
+
+        uvgrtp::frame::dealloc_frame(input_network_frame);
+    }
+
+    return 0;
+}
 
 int main(int argc, char *argv[])
 {
@@ -33,10 +69,10 @@ int main(int argc, char *argv[])
 
     // UVGRTP Setup
     uvgrtp::context ctx;
-    uvgrtp::session *session = ctx.create_session(hostname.c_str());
-    // checkout RCC_UDP_SND_BUF_SIZE and RCC_UDP_RCV_BUF_SIZE
-    // https://github.com/ultravideo/uvgRTP/issues/76
+    uvgrtp::session *session = ctx.create_session(hostname);
     uvgrtp::media_stream *rtp_stream = session->create_stream(receive_port, send_port, RTP_FORMAT_GENERIC, RCE_FRAGMENT_GENERIC);
+
+    SDL_Thread *network_thread = SDL_CreateThread(network_thread_fn, NULL, rtp_stream);
 
     // Gstreamer Setup
     gst_init(&argc, &argv);
