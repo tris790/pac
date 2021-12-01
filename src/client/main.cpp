@@ -284,8 +284,6 @@ int main(int argc, char *argv[])
     SDL_Event event;
     bool isPlaying = true;
 
-    auto rt = init_network_connection();
-
     while (true)
     {
         // Wait
