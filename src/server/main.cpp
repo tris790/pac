@@ -44,11 +44,11 @@ int network_thread_fn(void *rtp_stream_arg)
             // If received input
             if (input_packet->packet_type == NETWORK_PACKET_TYPE::REMOTE_INPUT)
             {
-                auto po = (SDL_Event &)input_packet->data;
+                auto input_received = (SDL_Event &)input_packet->data;
 
-                logger.debug("Recv input type %d", po.type);
+                logger.debug("Recv input type %d", input_received.type);
 
-                InputEmulator::handle_sdl_event(po);
+                InputEmulator::handle_sdl_event(input_received);
             }
         }
 
@@ -60,21 +60,6 @@ int network_thread_fn(void *rtp_stream_arg)
 
 int main(int argc, char *argv[])
 {
-    ////////////
-    // for (int i = 0; i < 20; i++)
-    // {
-    //     for (int j = 0; j < 20; j++)
-    //     {
-    //         SDL_Event fake_event;
-    //         fake_event.type = SDL_KEYDOWN;
-    //         fake_event.button.button = SDLK_a;
-    //         handle_sdl_event(fake_event);
-    //         sleep(1000);
-    //     }
-    // }
-    // return 0;
-    ////////////
-
     logger.info("Initializing the server");
     configuration = Config(get_exec_directory(argv[0]) + "server.conf");
 
