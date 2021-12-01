@@ -67,7 +67,7 @@ cmake -G "Ninja" -S ../ -B "build64/Release" -D CMAKE_BUILD_TYPE=Release
 cmake --build "build64/Release"
 ```
 
-### Gstreamer screen capture
+## Gstreamer screen capture
 
 - Windows: `gst-launch-1.0 dxgiscreencapsrc cursor=true ! video/x-raw,framerate=60/1 ! videoscale method=0 ! videoconvert ! autovideosink sync=false`
 - Linux: `gst-launch-1.0 ximagesrc startx=0 starty=0 use-damage=0 xid=83886082 ! video/x-raw,framerate=60/1 ! videoscale method=0 ! video/x-raw,width=1920,height=1080  ! autovideosink sync=false`
