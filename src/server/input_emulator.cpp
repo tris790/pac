@@ -10,11 +10,9 @@ void InputEmulator::emulate_mouse_movement(int mouse_x, int mouse_y)
     SetCursorPos(mouse_x, mouse_y);
 }
 
-void InputEmulator::emulate_keyboard_key(char key)
+void InputEmulator::emulate_keyboard_key(char sdl_key)
 {
-    auto vk_key = VkKeyScanExA(key, NULL);
-    logger.debug("key: %d - %d", vk_key, vk_key & 0xff);
-    // 00000010 01000101
+    auto vk_key = VkKeyScanExA(sdl_key, NULL);
     INPUT input = {0};
     input.type = INPUT_KEYBOARD;
     input.ki.wVk = 0;
@@ -22,7 +20,7 @@ void InputEmulator::emulate_keyboard_key(char key)
     input.ki.dwFlags = KEYEVENTF_UNICODE;
     input.ki.time = 0;
     input.ki.dwExtraInfo = 0;
-    if ((key & 0xFF00) == 0xE000)
+    if ((vk_key & 0xFF00) == 0xE000)
     {
         input.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
     }
