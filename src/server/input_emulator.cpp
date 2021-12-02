@@ -7,23 +7,27 @@
 
 void InputEmulator::emulate_mouse_movement(int mouse_x, int mouse_y)
 {
+    // auto monitor_flags = 0x2;
+    // auto hwnd = GetForegroundWindow();
+    // auto monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+
+    // LPMONITORINFO info = {0};
+    // GetMonitorInfoW(monitor, info);
+    // SetCursorPos(info->rcMonitor.right, info->rcMonitor.bottom);
     SetCursorPos(mouse_x, mouse_y);
 }
 
-void InputEmulator::emulate_keyboard_key(char sdl_key)
+void InputEmulator::emulate_keyboard_key(char sdl_key, bool isUp)
 {
     auto vk_key = VkKeyScanExA(sdl_key, NULL);
+    logger.debug("Windows key: %d", vk_key);
+
     INPUT input = {0};
     input.type = INPUT_KEYBOARD;
-    input.ki.wVk = 0;
-    input.ki.wScan = (WORD)vk_key & 0xff;
-    input.ki.dwFlags = KEYEVENTF_UNICODE;
+    input.ki.wVk = vk_key;
+    input.ki.dwFlags = isUp ? KEYEVENTF_KEYUP : 0;
     input.ki.time = 0;
     input.ki.dwExtraInfo = 0;
-    if ((vk_key & 0xFF00) == 0xE000)
-    {
-        input.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
-    }
     SendInput(1, &input, sizeof(INPUT));
 }
 
@@ -115,12 +119,12 @@ void InputEmulator::handle_sdl_event(SDL_Event &event)
     }
     else if (event_type == SDL_KEYDOWN)
     {
-        logger.debug("Kbd down evt %d", event.key);
-        emulate_keyboard_key(event.key.keysym.sym);
+        logger.debug("Kbd down evt %d", event.key.keysym.sym);
+        emulate_keyboard_key(event.key.keysym.sym, false);
     }
     else if (event_type == SDL_KEYUP)
     {
-        logger.debug("Kbd up evt %d", event.key);
-        emulate_keyboard_key(event.key.keysym.sym);
+        logger.debug("Kbd up evt %d", event.key.keysym.sym);
+        emulate_keyboard_key(event.key.keysym.sym, true);
     }
 }

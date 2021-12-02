@@ -12,7 +12,7 @@ public:
 
 private:
     static void emulate_mouse_movement(int mouse_x, int mouse_y);
-    static void emulate_keyboard_key(char key);
+    static void emulate_keyboard_key(char key, bool isUp);
     static void emulate_mouse_click(Uint8 button, bool pressed);
 };
 #endif
