@@ -10,12 +10,15 @@ void InputEmulator::emulate_mouse_movement(int mouse_x, int mouse_y)
     SetCursorPos(mouse_x, mouse_y);
 }
 
-void InputEmulator::emulate_keyboard_key(Uint8 key)
+void InputEmulator::emulate_keyboard_key(char key)
 {
+    auto vk_key = VkKeyScanExA(key, NULL);
+    logger.debug("key: %d - %d", vk_key, vk_key & 0xff);
+    // 00000010 01000101
     INPUT input = {0};
     input.type = INPUT_KEYBOARD;
     input.ki.wVk = 0;
-    input.ki.wScan = (WORD)key;
+    input.ki.wScan = (WORD)vk_key & 0xff;
     input.ki.dwFlags = KEYEVENTF_UNICODE;
     input.ki.time = 0;
     input.ki.dwExtraInfo = 0;
@@ -114,12 +117,12 @@ void InputEmulator::handle_sdl_event(SDL_Event &event)
     }
     else if (event_type == SDL_KEYDOWN)
     {
-        logger.debug("Keyboard evt %d", event.button.button);
-        emulate_keyboard_key(event.button.button);
+        logger.debug("Kbd down evt %d", event.key);
+        emulate_keyboard_key(event.key.keysym.sym);
     }
     else if (event_type == SDL_KEYUP)
     {
-        logger.debug("Keyboard evt %d", event.button.button);
-        emulate_keyboard_key(event.button.button);
+        logger.debug("Kbd up evt %d", event.key);
+        emulate_keyboard_key(event.key.keysym.sym);
     }
 }

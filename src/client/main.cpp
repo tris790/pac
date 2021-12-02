@@ -305,15 +305,6 @@ int main(int argc, char *argv[])
             SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, &sdlRect);
             SDL_RenderPresent(sdlRenderer);
         }
-        else if (is_network_input)
-        {
-            send_input_network(*rt, event);
-        }
-        else if (event.type == SDL_WINDOWEVENT)
-        {
-            //If Resize
-            SDL_GetWindowSize(screen, &window_width, &window_heigth);
-        }
         else if (event.type == SDL_QUIT)
         {
             logger.debug("SDL_Event: We got a quit event (SDL_QUIT)");
@@ -327,6 +318,15 @@ int main(int argc, char *argv[])
                 gst_element_send_event(pipeline_audio, gst_event_new_eos());
             }
             break;
+        }
+        else if (is_network_input)
+        {
+            send_input_network(*rt, event);
+        }
+        else if (event.type == SDL_WINDOWEVENT)
+        {
+            //If Resize
+            SDL_GetWindowSize(screen, &window_width, &window_heigth);
         }
     }
     SDL_Quit();

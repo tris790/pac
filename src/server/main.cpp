@@ -46,8 +46,6 @@ int network_thread_fn(void *rtp_stream_arg)
             {
                 auto input_received = (SDL_Event &)input_packet->data;
 
-                logger.debug("Recv input type %d", input_received.type);
-
                 InputEmulator::handle_sdl_event(input_received);
             }
         }
