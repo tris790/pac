@@ -93,13 +93,15 @@ void InputEmulator::emulate_mouse_click(Uint8 button, bool pressed)
 }
 #endif
 
-void InputEmulator::handle_sdl_event(SDL_Event &event)
+void InputEmulator::handle_sdl_event(SDL_Event &event, int screen_width, int screen_height)
 {
     SDL_EventType event_type = (SDL_EventType)event.type;
     if (event_type == SDL_MOUSEMOTION)
     {
-        int mouse_x = event.motion.x;
-        int mouse_y = event.motion.y;
+        float ratiox = event.motion.xrel/static_cast<float>(screen_width);
+        float ratioy = event.motion.yrel/static_cast<float>(screen_height);
+        int mouse_x = (int)(event.motion.x/ratiox);
+        int mouse_y = (int)(event.motion.y/ratioy);
         logger.debug("Mouse move evt: %d %d", mouse_x, mouse_y);
         emulate_mouse_movement(mouse_x, mouse_y);
     }
