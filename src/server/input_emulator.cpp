@@ -10,19 +10,17 @@ void InputEmulator::emulate_mouse_movement(int mouse_x, int mouse_y)
     SetCursorPos(mouse_x, mouse_y);
 }
 
-void InputEmulator::emulate_keyboard_key(Uint8 key)
+void InputEmulator::emulate_keyboard_key(char sdl_key, bool isUp)
 {
+    auto vk_key = VkKeyScanExA(sdl_key, NULL);
+    logger.debug("Windows key: %d", vk_key);
+
     INPUT input = {0};
     input.type = INPUT_KEYBOARD;
-    input.ki.wVk = 0;
-    input.ki.wScan = (WORD)key;
-    input.ki.dwFlags = KEYEVENTF_UNICODE;
+    input.ki.wVk = vk_key;
+    input.ki.dwFlags = isUp ? KEYEVENTF_KEYUP : 0;
     input.ki.time = 0;
     input.ki.dwExtraInfo = 0;
-    if ((key & 0xFF00) == 0xE000)
-    {
-        input.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
-    }
     SendInput(1, &input, sizeof(INPUT));
 }
 
@@ -88,14 +86,16 @@ void InputEmulator::emulate_mouse_click(Uint8 button, bool pressed)
 }
 #endif
 
-void InputEmulator::handle_sdl_event(SDL_Event &event)
+void InputEmulator::handle_sdl_event(SDL_Event &event, int screen_width, int screen_height)
 {
     SDL_EventType event_type = (SDL_EventType)event.type;
     if (event_type == SDL_MOUSEMOTION)
     {
-        int mouse_x = event.motion.x;
-        int mouse_y = event.motion.y;
-        logger.debug("Mouse move evt: %d %d", mouse_x, mouse_y);
+        float ratiox = event.motion.xrel / static_cast<float>(screen_width);
+        float ratioy = event.motion.yrel / static_cast<float>(screen_height);
+        int mouse_x = (int)(event.motion.x / ratiox);
+        int mouse_y = (int)(event.motion.y / ratioy);
+        // logger.debug("Mouse move evt: %d %d", mouse_x, mouse_y);
         emulate_mouse_movement(mouse_x, mouse_y);
     }
     else if (event_type == SDL_MOUSEBUTTONDOWN)
@@ -114,12 +114,12 @@ void InputEmulator::handle_sdl_event(SDL_Event &event)
     }
     else if (event_type == SDL_KEYDOWN)
     {
-        logger.debug("Keyboard evt %d", event.button.button);
-        emulate_keyboard_key(event.button.button);
+        logger.debug("Kbd down evt %d", event.key.keysym.sym);
+        emulate_keyboard_key(event.key.keysym.sym, false);
     }
     else if (event_type == SDL_KEYUP)
     {
-        logger.debug("Keyboard evt %d", event.button.button);
-        emulate_keyboard_key(event.button.button);
+        logger.debug("Kbd up evt %d", event.key.keysym.sym);
+        emulate_keyboard_key(event.key.keysym.sym, true);
     }
 }

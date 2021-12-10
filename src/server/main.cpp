@@ -24,6 +24,8 @@
 #undef main
 
 Config configuration;
+int width = -1;
+int height = -1;
 
 #define GSTREAMER_CAPTURE 1
 
@@ -46,9 +48,7 @@ int network_thread_fn(void *rtp_stream_arg)
             {
                 auto input_received = (SDL_Event &)input_packet->data;
 
-                logger.debug("Recv input type %d", input_received.type);
-
-                InputEmulator::handle_sdl_event(input_received);
+                InputEmulator::handle_sdl_event(input_received, width, height);
             }
         }
 
@@ -58,11 +58,73 @@ int network_thread_fn(void *rtp_stream_arg)
     return 0;
 }
 
+void setHeightWidth()
+{
+#ifdef _WIN32
+    auto pipeline_args = configuration["gstreamer_windows"];
+#else
+    auto pipeline_args = configuration["gstreamer_linux"];
+    int startx = -1;
+    int starty = -1;
+    int endx = -1;
+    int endy = -1;
+#endif
+    size_t pos = 0;
+    std::string token;
+    std::string s = pipeline_args;
+    std::string delim = " ";
+
+    while ((pos = s.find(delim)) != std::string::npos)
+    {
+        token = s.substr(0, pos);
+        auto name = token.substr(0, token.find("="));
+        auto val = token.substr(token.find("=") + 1, token.length());
+#ifdef _WIN32
+        if (name == "width" && width == -1)
+        {
+            width = stoi(val);
+        }
+        if (name == "height" && height == -1)
+        {
+            height = stoi(val);
+        }
+#else
+        if (name == "startx" && startx == -1)
+        {
+            startx = stoi(val);
+        }
+        if (name == "starty" && starty == -1)
+        {
+            starty = stoi(val);
+        }
+        if (name == "endx" && endx == -1)
+        {
+            endx = stoi(val);
+        }
+        if (name == "endy" && endy == -1)
+        {
+            endy = stoi(val);
+        }
+#endif
+        s.erase(0, pos + delim.length());
+    }
+#ifndef _WIN32
+    if (startx != -1 && endx != -1)
+    {
+        width = std::stoi(endx - startx)
+    }
+    if (starty != -1 && endy != -1)
+    {
+        heigth = std::stoi(endy - starty)
+    }
+#endif
+}
+
 int main(int argc, char *argv[])
 {
     logger.info("Initializing the server");
     configuration = Config(get_exec_directory(argv[0]) + "server.conf");
-
+    setHeightWidth();
     std::string hostname(configuration["hostname"]);
     auto receive_port = stoi(configuration["receive_port"]);
     auto send_port = stoi(configuration["send_port"]);

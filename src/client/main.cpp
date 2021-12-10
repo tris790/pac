@@ -34,6 +34,7 @@ int screen_buffer_w = 0;
 int screen_buffer_h = 0;
 SDL_Texture *sdlTexture;
 Mix_Chunk *mmusic;
+SDL_Window *screen;
 unsigned char *screen_buffer;
 unsigned char *audio_buffer;
 int audio_buffer_length;
@@ -73,12 +74,19 @@ void send_input_network(uvgrtp::media_stream &rtp_stream, SDL_Event &event)
         NETWORK_PACKET_TYPE::REMOTE_INPUT, // packet_type
         NULL                               // data
     };
+    int width = -1, height = -1;
+    SDL_GetWindowSize(screen, &width, &height);
+    if (width != -1 && height != -1)
+    {
+        event.motion.xrel = width;
+        event.motion.yrel = height;
 
-    memcpy(input_network_packet.data, &event, sizeof(SDL_Event));
+        memcpy(input_network_packet.data, &event, sizeof(SDL_Event));
 
-    rtp_stream.push_frame((uint8_t *)&input_network_packet, sizeof(NetworkPacket), RTP_NO_FLAGS);
+        rtp_stream.push_frame((uint8_t *)&input_network_packet, sizeof(NetworkPacket), RTP_NO_FLAGS);
 
-    auto input_send = (SDL_Event &)input_network_packet.data;
+        auto input_send = (SDL_Event &)input_network_packet.data;
+    }
 }
 
 typedef struct
@@ -257,7 +265,6 @@ int main(int argc, char *argv[])
 
     logger.debug("[Now] SDL initialized");
 
-    SDL_Window *screen;
     //SDL 2.0 Support for multiple windows
     const char *window_name = "Pac - Client";
     screen = SDL_CreateWindow(window_name, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
@@ -305,15 +312,6 @@ int main(int argc, char *argv[])
             SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, &sdlRect);
             SDL_RenderPresent(sdlRenderer);
         }
-        else if (is_network_input)
-        {
-            send_input_network(*rt, event);
-        }
-        else if (event.type == SDL_WINDOWEVENT)
-        {
-            //If Resize
-            SDL_GetWindowSize(screen, &window_width, &window_heigth);
-        }
         else if (event.type == SDL_QUIT)
         {
             logger.debug("SDL_Event: We got a quit event (SDL_QUIT)");
@@ -327,6 +325,15 @@ int main(int argc, char *argv[])
                 gst_element_send_event(pipeline_audio, gst_event_new_eos());
             }
             break;
+        }
+        else if (is_network_input)
+        {
+            send_input_network(*rt, event);
+        }
+        else if (event.type == SDL_WINDOWEVENT)
+        {
+            //If Resize
+            SDL_GetWindowSize(screen, &window_width, &window_heigth);
         }
     }
     SDL_Quit();
