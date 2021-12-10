@@ -7,13 +7,6 @@
 
 void InputEmulator::emulate_mouse_movement(int mouse_x, int mouse_y)
 {
-    // auto monitor_flags = 0x2;
-    // auto hwnd = GetForegroundWindow();
-    // auto monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
-
-    // LPMONITORINFO info = {0};
-    // GetMonitorInfoW(monitor, info);
-    // SetCursorPos(info->rcMonitor.right, info->rcMonitor.bottom);
     SetCursorPos(mouse_x, mouse_y);
 }
 
@@ -98,11 +91,11 @@ void InputEmulator::handle_sdl_event(SDL_Event &event, int screen_width, int scr
     SDL_EventType event_type = (SDL_EventType)event.type;
     if (event_type == SDL_MOUSEMOTION)
     {
-        float ratiox = event.motion.xrel/static_cast<float>(screen_width);
-        float ratioy = event.motion.yrel/static_cast<float>(screen_height);
-        int mouse_x = (int)(event.motion.x/ratiox);
-        int mouse_y = (int)(event.motion.y/ratioy);
-        logger.debug("Mouse move evt: %d %d", mouse_x, mouse_y);
+        float ratiox = event.motion.xrel / static_cast<float>(screen_width);
+        float ratioy = event.motion.yrel / static_cast<float>(screen_height);
+        int mouse_x = (int)(event.motion.x / ratiox);
+        int mouse_y = (int)(event.motion.y / ratioy);
+        // logger.debug("Mouse move evt: %d %d", mouse_x, mouse_y);
         emulate_mouse_movement(mouse_x, mouse_y);
     }
     else if (event_type == SDL_MOUSEBUTTONDOWN)
