@@ -75,7 +75,25 @@ cmake --build "build64/Release"
 - h264 recorder: `gst-launch-1.0.exe dx9screencapsrc ! video/x-raw,framerate=60/1 ! videoconvert ! nvh264enc preset=low-latency-hp max-bitrate=2000 ! queue ! rtph264pay ! udpsink host=127.0.0.1 port=9996`
 - h264 receiver: `gst-launch-1.0.exe udpsrc port=9996 caps="application/x-rtp, media=video, clock-rate=90000, encoding-name=H264, payload=96" ! rtph264depay ! queue ! decodebin ! videoconvert ! autovideosink`
 
+## Demo
+
+> Note that the video was encoded with a very low bit rate. The raw capture with PAC is in much better quality.
+
+https://user-images.githubusercontent.com/36494201/146623668-0e204605-8868-464d-962e-135193dbddd7.mp4
+
 ## FAQ
 Q: Pac-server cannot record / find monitor X   
 A: Your are most likely using a hybrid graphics system (integrated gpu + external gpu). You need to set the Graphics performance preference to "low power (integrated gpu)" for pac-server.exe
 <img src="assets/graphics-settings.png" alt="Graphics Settings Windows">
+
+
+
+
+
+
+
+
+
+
+
+
